@@ -1,0 +1,18 @@
+# Secrets
+auth.json
+.env
+.env.*
+*.key
+*.pem
+
+# Node
+node_modules/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Local/runtime data
+sessions/
+*.log
