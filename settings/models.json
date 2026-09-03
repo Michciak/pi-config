@@ -1,0 +1,29 @@
+{
+  "providers": {
+    "local-glm": {
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "api": "openai-completions",
+      "authHeader": true,
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      },
+      "models": [
+        {
+          "id": "ggml-org/GLM-4.7-Flash-GGUF:Q4_K",
+          "name": "GLM-4.7-Flash Q4_K (local)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 202752,
+          "maxTokens": 32768,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        }
+      ]
+    }
+  }
+}
