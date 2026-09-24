@@ -141,6 +141,9 @@ export default function browserExtension(pi: ExtensionAPI) {
     if (!context) {
       context = await chromium.launchPersistentContext(profileDir, {
         headless,
+        ...(process.env.PI_BROWSER_EXECUTABLE_PATH
+          ? { executablePath: process.env.PI_BROWSER_EXECUTABLE_PATH }
+          : {}),
         viewport: { width: 1280, height: 800 },
       });
     }

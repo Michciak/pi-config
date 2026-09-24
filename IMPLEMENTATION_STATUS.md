@@ -56,7 +56,11 @@ Baseline audit complete; staged implementation is in progress.
 
 ## Remaining gated work
 
+- Browser tools remain opt-in (`/browser on`); Playwright executable selection now supports `PI_BROWSER_EXECUTABLE_PATH`.
+
 - Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
+- `web-fetch` successfully fetched `https://example.com`; `web-search` correctly reports missing credentials.
+- Browser dependency smoke test passed: Chromium navigated to Example Domain, read DOM title, and wrote `/tmp/pi-config-example.png`.
 - Failure/recovery fixture at `~/projects/pi-qwen-recovery-fixture` demonstrates FAIL → production-only repair → PASS; final suite is 3/3 and tests were not modified during the repair.
 - GLM fallback remains unavailable until the GLM server is started on port 8080.
 - Google web search remains unavailable until credentials are supplied by the user.

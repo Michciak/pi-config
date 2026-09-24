@@ -17,6 +17,8 @@ questions itself.
 cd ~/.pi/agent/extensions/browser
 npm install
 npx playwright install chromium    # one-time browser binary download (~150MB)
+# If playwright-core and the downloaded browser versions differ:
+export PI_BROWSER_EXECUTABLE_PATH="$HOME/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome"
 ```
 
 Then `/reload` inside pi (or restart). The new tools (`browser_goto`,
@@ -83,6 +85,7 @@ for status; `close` and `kill` are aliases for `off`).
 |---|---|---|
 | `PI_BROWSER_HEADFUL` | unset | If set, launch a visible Chromium window. Useful when debugging the extension itself. |
 | `PI_BROWSER_PROFILE` | `~/.pi/agent/extensions/browser/.profile` | Override the persistent user-data dir. Set to a tempdir for ephemeral sessions. |
+| `PI_BROWSER_EXECUTABLE_PATH` | unset | Explicit Chromium executable when Playwright's versioned browser is unavailable. |
 
 ## Network output: terse by default, headers on opt-in
 
