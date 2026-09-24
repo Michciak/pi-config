@@ -30,18 +30,19 @@ Baseline audit complete; staged implementation is in progress.
 - GLM-5.3: retained; not modified or removed
 - User backup: `~/.local/state/pi-config-backup/20260924-203702/`
 
-## Existing resources
+## Current resources
 
-- `extensions/config-test.ts`
-- `settings/models.json`
-- no upstream Amos components or skills imported yet
+- Extensions: diagnostics, routing, config-test, Amos tools, browser, and tmux subagents.
+- Skills: analyze-sessions, pdf-reader, web-debug, youtube-transcript.
+- Settings: curated models and capability registry.
+- Services: user-unit templates installed but disabled/stopped.
 
-## Differences and blockers
+## Known blockers
 
-- Repository initially contained the handoff plan as an untracked file.
-- No `package.json` existed; package metadata and local dependencies need to be added.
-- Local llama-server units are not active; system-wide service changes are out of scope.
-- Third-party upstream components require fresh review and pinned provenance before import.
+- GLM fallback is not running on `8080`.
+- Google Custom Search credentials are not configured.
+- OpenAI, Cursor, LightLLM, and MCP integrations are not yet implemented.
+- Full observational-memory compaction/resume test remains pending.
 
 ## Completed since baseline
 
