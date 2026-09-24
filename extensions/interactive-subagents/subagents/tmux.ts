@@ -1,14 +1,13 @@
 /**
  * tmux surface layer — the only terminal multiplexer this extension supports.
  *
- * Everything the extension does to a pane goes through the small API in this
- * file: create/split a pane, type a command into it, read its screen, close
- * it, and poll for exit. Keeping the tmux calls isolated here means index.ts
- * stays testable without a multiplexer running.
+ * Everything the extension does to a tmux surface goes through the small API
+ * in this file: create a window, type a command into its pane, read its screen,
+ * close it, and poll for exit. Keeping the tmux calls isolated here means
+ * index.ts stays testable without a multiplexer running.
  *
- * Panes are identified by tmux pane ids (e.g. `%12`). Splits always target
- * the parent pi's pane (`$TMUX_PANE`) so they follow the agent rather than
- * the user's focus.
+ * Surfaces are identified by tmux pane ids (e.g. `%12`). New subagents get a
+ * separate tmux window rather than resizing the parent window into a split.
  */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
@@ -107,15 +106,34 @@ function rebalanceSurfaces(hintPane?: string): void {
 // ── Surface primitives ──
 
 /**
- * Create a new pane for a subagent: a right split off the parent pi's pane,
- * so new panes follow the agent rather than the user's focus.
- * See https://github.com/HazAT/pi-interactive-subagents/issues/12
+ * Create a separate tmux window for a subagent. The new window is detached
+ * from the user's focus, but remains in the parent's tmux session and can be
+ * selected with `Ctrl-b n` / `tmux list-windows`.
  *
- * Returns the new pane id (e.g. `%12`).
+ * Returns the new window's pane id (e.g. `%12`).
  */
 export function createSurface(name: string): string {
-  void name; // tmux panes are not named; the pi process inside shows its own title.
-  return createSurfaceSplit(name, "right", process.env.TMUX_PANE);
+  requireTmux();
+  const args = ["new-window", "-d", "-P", "-F", "#{pane_id}"];
+  // new-window accepts a session/window target, not a pane target. Resolve the
+  // parent pane to its session so the new window stays beside the parent Pi.
+  if (process.env.TMUX_PANE) {
+    try {
+      const session = execFileSync("tmux", [
+        "display-message", "-p", "-t", process.env.TMUX_PANE, "#{session_name}",
+      ], { encoding: "utf8" }).trim();
+      if (session) args.push("-t", session);
+    } catch {
+      // tmux will use the current session when no explicit target is available.
+    }
+  }
+  if (name) args.push("-n", name.replace(/[\n\r]/g, " ").slice(0, 80));
+  const pane = execFileSync("tmux", args, { encoding: "utf8" }).trim();
+  if (!pane.startsWith("%")) {
+    throw new Error(`Unexpected tmux new-window output: ${pane}`);
+  }
+  rebalanceSurfaces(pane);
+  return pane;
 }
 
 /**

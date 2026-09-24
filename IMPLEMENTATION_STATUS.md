@@ -70,6 +70,7 @@ Baseline audit complete; staged implementation is in progress.
 - Google web search remains unavailable until credentials are supplied by the user.
 - GLM fallback on 8080 is still stopped; this is expected because only Qwen was requested.
 - Live tmux spawn test passed in a disposable `pi-config-subagent-test` session: scout ran on local Qwen, read `README.md`, and returned `# Pi Configuration`; the test session was removed afterward.
+- Fixed tmux surface creation: subagents now open a separate tmux window via `new-window`, not a split pane. Direct surface test confirmed a `surface-test` window appears and closes cleanly.
 - The policy test suite covers scope, health, quota, manual override, and the OpenRouter simple-task boundary.
 - Corrected observational-memory model IDs to the exact Qwen `UD-Q4_K_M` identifier; backup created before the runtime edit.
 - RPC smoke test accepted `/om on`, `/om:status`, and `/om off`; no `.memory/` was created in the no-session smoke run. Full compaction validation still needs a real test session.
