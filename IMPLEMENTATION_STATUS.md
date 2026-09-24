@@ -57,6 +57,7 @@ Baseline audit complete; staged implementation is in progress.
 ## Remaining gated work
 
 - Browser tools remain opt-in (`/browser on`); Playwright executable selection now supports `PI_BROWSER_EXECUTABLE_PATH`.
+- User units installed and daemon-reloaded under `~/.config/systemd/user/`; both remain disabled and stopped.
 
 - Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
 - `web-fetch` successfully fetched `https://example.com`; `web-search` correctly reports missing credentials.
