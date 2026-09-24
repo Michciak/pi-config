@@ -57,8 +57,10 @@ Baseline audit complete; staged implementation is in progress.
 ## Remaining gated work
 
 - Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
+- Failure/recovery fixture at `~/projects/pi-qwen-recovery-fixture` demonstrates FAIL → production-only repair → PASS; final suite is 3/3 and tests were not modified during the repair.
 - GLM fallback remains unavailable until the GLM server is started on port 8080.
 - Google web search remains unavailable until credentials are supplied by the user.
+- GLM fallback on 8080 is still stopped; this is expected because only Qwen was requested.
 - Interactive subagents, observational memory, user services, extra providers, MCP, and production router adapters remain intentionally gated; their upstream versions and credentials need separate review rather than being silently enabled.
 
 ## Next action
