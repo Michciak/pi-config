@@ -16,6 +16,7 @@ Curated local Pi configuration for multi-provider orchestration.
 
 ```bash
 ./scripts/health-check.sh
+./scripts/health-check.sh --deep
 node --test scripts/router.test.mjs
 pi --list-models
 ```
