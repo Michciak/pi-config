@@ -17,7 +17,12 @@ Imported: 2026-09-24
 | web-debug | `skills/web-debug` | browser extension | integrated |
 | youtube-transcript | `skills/youtube-transcript` | optional yt-dlp/ffmpeg | integrated, dependencies not assumed |
 
-The upstream interactive-subagents and observational-memory directories are documented
-stubs and are deliberately not loaded as final implementations.
-No upstream auth file is copied. Local modifications are limited to configuration,
-provenance, and dependency isolation.
+| interactive-subagents 3.7.2 | `extensions/interactive-subagents` | tmux | integrated, scout/worker use local Qwen; researcher uses scoped `openrouter/auto` |
+
+Interactive-subagents source is pinned to `c3e8b53c0754ae5ccc19fdab5a7481ec039bc2f7`.
+Local changes: package wrapper, scoped model overrides, local web-tool paths, and
+agent-directory path correction. `tmux` 3.7c is installed; no service/autostart was added.
+
+The upstream observational-memory directory remains deliberately not loaded as a
+final implementation. No upstream auth file is copied. Local modifications are
+limited to configuration, provenance, and dependency isolation.

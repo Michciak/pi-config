@@ -1,0 +1,13 @@
+{
+  "name": "pi-config-interactive-subagents",
+  "private": true,
+  "version": "3.7.2-local.1",
+  "type": "module",
+  "pi": { "extensions": ["./subagents/index.ts"] },
+  "dependencies": { "@sinclair/typebox": "^0.34.49" },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  }
+}

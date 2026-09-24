@@ -58,6 +58,7 @@ Baseline audit complete; staged implementation is in progress.
 
 - Browser tools remain opt-in (`/browser on`); Playwright executable selection now supports `PI_BROWSER_EXECUTABLE_PATH`.
 - User units installed and daemon-reloaded under `~/.config/systemd/user/`; both remain disabled and stopped.
+- `tmux` 3.7c installed; interactive-subagents pinned and loaded. `subagents_list` exposes scout, researcher, and worker with scoped models.
 
 - Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
 - `web-fetch` successfully fetched `https://example.com`; `web-search` correctly reports missing credentials.
@@ -66,6 +67,7 @@ Baseline audit complete; staged implementation is in progress.
 - GLM fallback remains unavailable until the GLM server is started on port 8080.
 - Google web search remains unavailable until credentials are supplied by the user.
 - GLM fallback on 8080 is still stopped; this is expected because only Qwen was requested.
+- A live tmux spawn test still requires running the main Pi session inside tmux; no detached production session was created automatically.
 - Interactive subagents, observational memory, user services, extra providers, MCP, and production router adapters remain intentionally gated; their upstream versions and credentials need separate review rather than being silently enabled.
 
 ## Next action

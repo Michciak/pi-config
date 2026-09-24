@@ -21,3 +21,4 @@ sessions/
 extensions/web-search/auth.json
 extensions/*/.env
 skills/*/.venv/
+extensions/config.json
