@@ -1,0 +1,17 @@
+{
+  "name": "pi-config-local",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Curated local Pi configuration and orchestration extensions",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extensions/*.ts", "./extensions/*/index.ts"],
+    "skills": ["./skills/*/SKILL.md"],
+    "prompts": ["./prompts/*.md"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  }
+}

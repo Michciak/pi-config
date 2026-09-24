@@ -43,6 +43,21 @@ Baseline audit complete; staged implementation is in progress.
 - Local llama-server units are not active; system-wide service changes are out of scope.
 - Third-party upstream components require fresh review and pinned provenance before import.
 
+## Completed since baseline
+
+- Curated scope applied to `~/.pi/agent/settings.json`: Qwen, GLM, and `openrouter/auto`.
+- Added `settings/model-capabilities.json` and `settings/model-catalog.md`.
+- Imported reviewed Amos components at upstream commit `f82da563ab05d66729492d64c7ed4e96db3663f3`.
+- Installed isolated npm dependencies for bash guard, browser, and web fetch; installed Chromium and a local PDF-reader venv.
+- Added non-secret `/config-health`, `scripts/health-check.sh`, and scope-enforcing `scripts/route-model.mjs`.
+- Orchestrator regression: lookup → `17 * 24` → `408 - 13` → verify `395`: PASS.
+
+## Remaining gated work
+
+- Local inference tests are blocked until llama-server is started on ports 8080/8081.
+- Google web search remains unavailable until credentials are supplied by the user.
+- Interactive subagents, observational memory, user services, extra providers, MCP, and production router adapters remain intentionally gated; their upstream versions and credentials need separate review rather than being silently enabled.
+
 ## Next action
 
-Define and validate the initial curated model scope, then add capability metadata and non-secret health diagnostics.
+Start the local endpoints for inference smoke tests, then validate each imported extension interactively before enabling additional orchestration packages.

@@ -16,3 +16,8 @@ node_modules/
 # Local/runtime data
 sessions/
 *.log
+
+# Local extension credentials
+extensions/web-search/auth.json
+extensions/*/.env
+skills/*/.venv/
