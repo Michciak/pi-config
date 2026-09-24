@@ -56,6 +56,11 @@ export function route(task = {}, runtime = {}) {
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   const input = process.argv[2] ? JSON.parse(process.argv[2]) : {};
-  try { console.log(JSON.stringify(route(input.task ?? input, input.runtime ?? {}), null, 2)); }
+  let runtime = input.runtime ?? {};
+  const runtimeIndex = process.argv.indexOf("--runtime-file");
+  if (runtimeIndex >= 0 && process.argv[runtimeIndex + 1]) {
+    runtime = JSON.parse(fs.readFileSync(process.argv[runtimeIndex + 1], "utf8"));
+  }
+  try { console.log(JSON.stringify(route(input.task ?? input, runtime), null, 2)); }
   catch (error) { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }
 }
