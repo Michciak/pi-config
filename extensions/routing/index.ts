@@ -14,6 +14,7 @@ export default function (pi: ExtensionAPI) {
       const scope = new Set<string>(settings.enabledModels ?? []);
       const candidates = Object.entries(capabilities as Record<string, any>)
         .filter(([id, meta]) => scope.has(id) && meta.enabled && meta.verified)
+        .filter(([, meta]) => meta.local || task.taskClass === "simple")
         .filter(([, meta]) => !task.localOnly || meta.local)
         .filter(([, meta]) => !task.role || meta.roles.includes(task.role))
         .filter(([, meta]) => !task.vision || meta.vision)

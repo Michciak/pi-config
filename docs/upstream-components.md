@@ -21,8 +21,10 @@ Imported: 2026-09-24
 | observational-memory 0.1.0 | `extensions/observational-memory` | local npm deps | integrated, default OFF, observer concurrency 1 |
 
 Interactive-subagents source is pinned to `c3e8b53c0754ae5ccc19fdab5a7481ec039bc2f7`.
-Local changes: package wrapper, scoped model overrides, local web-tool paths, and
-agent-directory path correction. `tmux` 3.7c is installed; no service/autostart was added.
+Local changes: package wrapper, orchestrator-owned scoped model selection, local
+web-tool paths, and agent-directory path correction. Agent profiles do not pin models;
+complex tasks use local Qwen, while OpenRouter is permitted only for explicit
+`taskClass: simple` requests. `tmux` 3.7c is installed; no service/autostart was added.
 
 Observational-memory source is pinned to `78a1efcfdd46332253fb289724f05b26dfc7769e`.
 Local configuration selects Qwen for observer/consolidator, concurrency 1, and keeps

@@ -2,7 +2,6 @@
 name: scout
 description: Fast codebase recon — explores files, finds patterns, maps architecture
 tools: read, grep, find, ls
-model: local-qwen36/unsloth/Qwen3.6-35B-A3B-GGUF:UD_Q4_K_M
 thinking: low
 system-prompt: append
 auto-exit: true

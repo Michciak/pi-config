@@ -12,6 +12,8 @@ function eligible(id, meta, task, runtime) {
   if (!scope.has(id) || !meta.enabled || !meta.verified) return false;
   if (state.healthy === false) return false;
   if (state.quotaKnown && state.quotaRemaining <= 0) return false;
+  // Remote/OpenRouter models are reserved for explicitly simple work.
+  if (!meta.local && task.taskClass !== "simple") return false;
   if (task.localOnly && !meta.local) return false;
   if (task.role && !meta.roles.includes(task.role)) return false;
   if (task.vision && !meta.vision) return false;
@@ -25,6 +27,7 @@ function score(id, meta, task, runtime) {
   const state = runtime[id] ?? {};
   let value = meta.priority ?? 0;
   if (task.role && meta.roles.includes(task.role)) value += 30;
+  if (task.taskClass === "simple" && !meta.local) value += 5;
   if (task.localPreferred && meta.local) value += 20;
   if (task.latency === "low" && meta.latencyClass === "fast-local") value += 20;
   if (task.cost === "low" && meta.costClass === "local") value += 20;

@@ -14,6 +14,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
+import { selectAgentModel, type AgentTaskClass } from "../../routing/policy.ts";
 import {
   isMuxAvailable,
   muxSetupHint,
@@ -105,7 +106,11 @@ const SubagentParams = Type.Object({
         "Has no effect on which agent runs — use `agent` for that.",
     }),
   ),
-  model: Type.Optional(Type.String({ description: "Model override (overrides agent default)" })),
+  model: Type.Optional(Type.String({ description: "Local model override; OpenRouter is allowed only for simple tasks" })),
+  taskClass: Type.Optional(Type.Union([
+    Type.Literal("simple"),
+    Type.Literal("complex"),
+  ], { description: "Orchestrator classification; defaults to complex" })),
   cwd: Type.Optional(
     Type.String({
       description:
@@ -1180,7 +1185,12 @@ async function launchSubagent(
   const id = Math.random().toString(16).slice(2, 10);
 
   const agentDefs = params.agent ? loadAgentDefaults(params.agent) : null;
-  const effectiveModel = params.model ?? agentDefs?.model;
+  // Model selection is centralized in the orchestrator. Agent frontmatter is
+  // descriptive only; it cannot silently select a remote provider.
+  const effectiveModel = selectAgentModel({
+    requested: params.model,
+    taskClass: params.taskClass as AgentTaskClass | undefined,
+  });
   const effectiveTools = agentDefs?.tools;
   const effectiveSkills = agentDefs?.skills;
   const effectiveThinking = agentDefs?.thinking;

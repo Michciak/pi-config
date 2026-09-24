@@ -18,7 +18,15 @@ test("unhealthy Qwen falls back without leaving scope", () => {
 });
 
 test("exhausted quota is filtered", () => {
-  assert.equal(route({}, { [qwen]: { quotaKnown: true, quotaRemaining: 0 }, [glm]: { healthy: false } }).selected, auto);
+  assert.equal(route({ taskClass: "simple" }, { [qwen]: { quotaKnown: true, quotaRemaining: 0 }, [glm]: { healthy: false } }).selected, auto);
+});
+
+test("OpenRouter is excluded from complex-task fallback", () => {
+  assert.throws(() => route({}, { [qwen]: { healthy: false }, [glm]: { healthy: false } }), /No eligible/);
+});
+
+test("OpenRouter is available only for explicitly simple tasks", () => {
+  assert.equal(route({ taskClass: "simple" }, { [qwen]: { healthy: false }, [glm]: { healthy: false } }).selected, auto);
 });
 
 test("manual override is respected", () => {

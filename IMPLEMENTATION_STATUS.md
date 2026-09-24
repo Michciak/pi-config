@@ -60,6 +60,7 @@ Baseline audit complete; staged implementation is in progress.
 - User units installed and daemon-reloaded under `~/.config/systemd/user/`; both remain disabled and stopped.
 - `tmux` 3.7c installed; interactive-subagents pinned and loaded. `subagents_list` exposes scout, researcher, and worker with scoped models.
 - Observational-memory pinned and loaded with Qwen observer/consolidator, concurrency 1, and default OFF gate; a pre-change settings backup was created.
+- Agent model choice is now orchestrator-owned: profiles have no model field, complex tasks default to local Qwen, and OpenRouter is permitted only with explicit `taskClass: simple`.
 
 - Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
 - `web-fetch` successfully fetched `https://example.com`; `web-search` correctly reports missing credentials.
@@ -69,6 +70,7 @@ Baseline audit complete; staged implementation is in progress.
 - Google web search remains unavailable until credentials are supplied by the user.
 - GLM fallback on 8080 is still stopped; this is expected because only Qwen was requested.
 - A live tmux spawn test still requires running the main Pi session inside tmux; no detached production session was created automatically.
+- The policy test suite covers scope, health, quota, manual override, and the OpenRouter simple-task boundary.
 - RPC smoke test accepted `/om on`, `/om:status`, and `/om off`; no `.memory/` was created in the no-session smoke run. Full compaction validation still needs a real test session.
 - Interactive subagents, observational memory, user services, extra providers, MCP, and production router adapters remain intentionally gated; their upstream versions and credentials need separate review rather than being silently enabled.
 
