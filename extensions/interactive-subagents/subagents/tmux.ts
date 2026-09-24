@@ -2,12 +2,12 @@
  * tmux surface layer — the only terminal multiplexer this extension supports.
  *
  * Everything the extension does to a tmux surface goes through the small API
- * in this file: create a window, type a command into its pane, read its screen,
+ * in this file: create/split a pane, type a command into it, read its screen,
  * close it, and poll for exit. Keeping the tmux calls isolated here means
  * index.ts stays testable without a multiplexer running.
  *
- * Surfaces are identified by tmux pane ids (e.g. `%12`). New subagents get a
- * separate tmux window rather than resizing the parent window into a split.
+ * Surfaces are identified by tmux pane ids (e.g. `%12`). New subagents split
+ * the parent Pi pane when Pi is running inside tmux.
  */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
@@ -106,34 +106,13 @@ function rebalanceSurfaces(hintPane?: string): void {
 // ── Surface primitives ──
 
 /**
- * Create a separate tmux window for a subagent. The new window is detached
- * from the user's focus, but remains in the parent's tmux session and can be
- * selected with `Ctrl-b n` / `tmux list-windows`.
+ * Create a split pane for a subagent in the parent Pi window.
  *
- * Returns the new window's pane id (e.g. `%12`).
+ * Pi must be launched from inside tmux so `$TMUX_PANE` identifies the parent.
+ * Returns the new pane id (e.g. `%12`).
  */
 export function createSurface(name: string): string {
-  requireTmux();
-  const args = ["new-window", "-d", "-P", "-F", "#{pane_id}"];
-  // new-window accepts a session/window target, not a pane target. Resolve the
-  // parent pane to its session so the new window stays beside the parent Pi.
-  if (process.env.TMUX_PANE) {
-    try {
-      const session = execFileSync("tmux", [
-        "display-message", "-p", "-t", process.env.TMUX_PANE, "#{session_name}",
-      ], { encoding: "utf8" }).trim();
-      if (session) args.push("-t", session);
-    } catch {
-      // tmux will use the current session when no explicit target is available.
-    }
-  }
-  if (name) args.push("-n", name.replace(/[\n\r]/g, " ").slice(0, 80));
-  const pane = execFileSync("tmux", args, { encoding: "utf8" }).trim();
-  if (!pane.startsWith("%")) {
-    throw new Error(`Unexpected tmux new-window output: ${pane}`);
-  }
-  rebalanceSurfaces(pane);
-  return pane;
+  return createSurfaceSplit(name, "right", process.env.TMUX_PANE);
 }
 
 /**

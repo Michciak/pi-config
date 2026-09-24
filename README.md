@@ -28,8 +28,8 @@ Start Pi from inside tmux to use interactive subagents:
 tmux new -A -s pi 'pi'
 ```
 
-Subagents open separate tmux windows, not split panes. Use `Ctrl-b n` / `Ctrl-b p`
-to switch between them.
+Subagents open split panes in the parent tmux window. Start Pi inside tmux so
+`$TMUX_PANE` is available.
 
 ## Security
 
