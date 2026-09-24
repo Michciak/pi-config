@@ -62,6 +62,7 @@ Baseline audit complete; staged implementation is in progress.
 - `tmux` 3.7c installed; interactive-subagents pinned and loaded. `subagents_list` exposes scout, researcher, and worker with scoped models.
 - Observational-memory pinned and loaded with Qwen observer/consolidator, concurrency 1, and default OFF gate; a pre-change settings backup was created.
 - Agent model choice is now orchestrator-owned: profiles have no model field, complex tasks default to local Qwen, and OpenRouter is permitted only with explicit `taskClass: simple`.
+- Added `scripts/runtime-state.mjs`; it produces non-secret health/quota snapshots consumed by the router. Current snapshot: Qwen healthy, GLM stopped, OpenRouter quota unknown.
 
 - Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
 - `web-fetch` successfully fetched `https://example.com`; `web-search` correctly reports missing credentials.
