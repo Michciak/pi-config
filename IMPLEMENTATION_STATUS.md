@@ -51,6 +51,8 @@ Baseline audit complete; staged implementation is in progress.
 - Installed isolated npm dependencies for bash guard, browser, and web fetch; installed Chromium and a local PDF-reader venv.
 - Added non-secret `/config-health`, `scripts/health-check.sh`, and scope-enforcing `scripts/route-model.mjs`.
 - Orchestrator regression: lookup → `17 * 24` → `408 - 13` → verify `395`: PASS.
+- Pi offline startup smoke test with the package and curated OpenRouter model: PASS (`OK`).
+- Router smoke tests: local orchestrator resolves to Qwen; vision request resolves only within scope.
 
 ## Remaining gated work
 
