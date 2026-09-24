@@ -8,7 +8,11 @@ for file in settings/models.json settings/model-capabilities.json; do
 done
 for pair in 'local-qwen36:8081' 'local-glm:8080'; do
   name=${pair%:*}; port=${pair#*:}
-  code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 2 "http://127.0.0.1:$port/v1/models" || true)
+  url="http://127.0.0.1:$port/v1/models"
+  code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 2 "$url" || true)
+  if [ "$code" = 401 ] && [ -r /etc/llama-server/glm-api-key ]; then
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 2 -H "Authorization: Bearer $(cat /etc/llama-server/glm-api-key)" "$url" || true)
+  fi
   printf '%s (%s): HTTP %s\n' "$name" "$port" "${code:-000}"
 done
 printf 'auth: configured in ~/.pi/agent/auth.json (not inspected)\n'

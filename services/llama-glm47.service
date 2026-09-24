@@ -1,0 +1,12 @@
+[Unit]
+Description=llama.cpp GLM-4.7 local fallback endpoint for Pi
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/llama-server -hf ggml-org/GLM-4.7-Flash-GGUF:Q4_K --host 127.0.0.1 --port 8080 -ngl 999 -fa on --jinja --api-key-file /etc/llama-server/glm-api-key --reasoning auto --reasoning-preserve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,6 +1,6 @@
 # Implementation status
 
-Updated: 2026-09-24
+Updated: 2026-09-24 (continued after Qwen startup)
 
 ## Current phase
 
@@ -25,8 +25,8 @@ Baseline audit complete; staged implementation is in progress.
 
 ## Health snapshot
 
-- `127.0.0.1:8080`: unavailable during audit (no running llama-server)
-- `127.0.0.1:8081`: unavailable during audit (no running llama-server)
+- `127.0.0.1:8080`: unavailable; GLM server is not running
+- `127.0.0.1:8081`: authenticated `/v1/models` returns Qwen3.6 successfully
 - GLM-5.3: retained; not modified or removed
 - User backup: `~/.local/state/pi-config-backup/20260924-203702/`
 
@@ -56,10 +56,11 @@ Baseline audit complete; staged implementation is in progress.
 
 ## Remaining gated work
 
-- Local inference tests are blocked until llama-server is started on ports 8080/8081.
+- Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
+- GLM fallback remains unavailable until the GLM server is started on port 8080.
 - Google web search remains unavailable until credentials are supplied by the user.
 - Interactive subagents, observational memory, user services, extra providers, MCP, and production router adapters remain intentionally gated; their upstream versions and credentials need separate review rather than being silently enabled.
 
 ## Next action
 
-Start the local endpoints for inference smoke tests, then validate each imported extension interactively before enabling additional orchestration packages.
+Validate imported extensions interactively, and start the GLM fallback only when needed. User-service templates are available but intentionally not enabled or started.

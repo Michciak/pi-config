@@ -1,0 +1,12 @@
+[Unit]
+Description=llama.cpp Qwen3.6 local endpoint for Pi
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/llama-server -hf unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_M --host 127.0.0.1 --port 8081 -ngl 999 -fa on --jinja --api-key-file /etc/llama-server/glm-api-key --reasoning auto --reasoning-preserve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
