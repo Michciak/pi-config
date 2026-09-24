@@ -69,7 +69,7 @@ Baseline audit complete; staged implementation is in progress.
 - Google web search remains unavailable until credentials are supplied by the user.
 - GLM fallback on 8080 is still stopped; this is expected because only Qwen was requested.
 - A live tmux spawn test still requires running the main Pi session inside tmux; no detached production session was created automatically.
-- Observational-memory needs a dedicated test session to validate `/om on`, `.memory/`, compaction, and `/om off` before enabling it in normal work.
+- RPC smoke test accepted `/om on`, `/om:status`, and `/om off`; no `.memory/` was created in the no-session smoke run. Full compaction validation still needs a real test session.
 - Interactive subagents, observational memory, user services, extra providers, MCP, and production router adapters remain intentionally gated; their upstream versions and credentials need separate review rather than being silently enabled.
 
 ## Next action
