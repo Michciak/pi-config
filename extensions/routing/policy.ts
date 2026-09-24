@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const qwen = "local-qwen36/unsloth/Qwen3.6-35B-A3B-GGUF:UD_Q4_K_M";
+const qwen = "local-qwen36/unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_M";
 const scope = new Set<string>(JSON.parse(readFileSync(`${process.env.HOME}/.pi/agent/settings.json`, "utf8")).enabledModels ?? []);
 const capabilities = JSON.parse(readFileSync(new URL("../../settings/model-capabilities.json", import.meta.url), "utf8")) as Record<string, { local?: boolean; enabled?: boolean; verified?: boolean }>;
 
