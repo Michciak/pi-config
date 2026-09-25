@@ -11266,6 +11266,86 @@
       "bytes": 4627
     },
     {
+      "path": "skills/analyze-sessions/.gitignore",
+      "sha256": "907156c41126387a596510f85776d96aa199a198a4903bb59bb80b1d6f869380",
+      "bytes": 21
+    },
+    {
+      "path": "skills/analyze-sessions/SKILL.md",
+      "sha256": "23ac2a4cd7480e77bf17768971fdfb1ad429531f67dd374aa2d75fd25d8f297a",
+      "bytes": 6420
+    },
+    {
+      "path": "skills/analyze-sessions/scripts/cost.py",
+      "sha256": "bbfe11573ac51376b835d991db6771cc6963e629d773e682cdc83771390fba40",
+      "bytes": 7508
+    },
+    {
+      "path": "skills/analyze-sessions/scripts/prompts.py",
+      "sha256": "54f40e49cd84a84f2cc2203be6c5ba400edab3a881749cd19f880aeb5795ed0f",
+      "bytes": 4950
+    },
+    {
+      "path": "skills/analyze-sessions/scripts/search.py",
+      "sha256": "3e85f6dae5543fcb0beea7ee4bb0273e516a1a6de7ee266563a5434ec5062a37",
+      "bytes": 6100
+    },
+    {
+      "path": "skills/analyze-sessions/scripts/sessions.py",
+      "sha256": "3e766fe568ce190e57a194cef41a7f63d70899af9e621f8a75c13fcea9e525e9",
+      "bytes": 15478
+    },
+    {
+      "path": "skills/analyze-sessions/scripts/show_session.py",
+      "sha256": "b0526f5ca9d71055b8692bbd5da11e375a6e089c13f8f0184c0977783237093c",
+      "bytes": 8696
+    },
+    {
+      "path": "skills/pdf-reader/SKILL.md",
+      "sha256": "3103b8b54c7570eed155c4958aa15735458a6e973849b1c849a2e07f6b8c08a6",
+      "bytes": 5245
+    },
+    {
+      "path": "skills/pdf-reader/requirements.txt",
+      "sha256": "370a023f5374595edf76f25e9a5c46b70735b36b3d76e3d020bb1a3613439dd5",
+      "bytes": 18
+    },
+    {
+      "path": "skills/pdf-reader/scripts/pdf_extract.py",
+      "sha256": "f4400ac0c1b92c9ec9a09665e5a7b1c6614d2576389e69abaad9f2c0a5e1eec7",
+      "bytes": 1338
+    },
+    {
+      "path": "skills/pdf-reader/scripts/pdf_info.py",
+      "sha256": "6e300f996147f50f438ea517480d505c1a8611735f6dad8737b8a6ec51715c36",
+      "bytes": 2127
+    },
+    {
+      "path": "skills/pdf-reader/scripts/pdf_render.py",
+      "sha256": "77e620eb067ca0df842b5f83149a6dee5a8c1f8dd23302f247881d5d1c025590",
+      "bytes": 1965
+    },
+    {
+      "path": "skills/pdf-reader/scripts/pdf_search.py",
+      "sha256": "28826aa4b2a438d49bed222f956b264b4ea8a2354b0315a874644ebc50559abe",
+      "bytes": 1845
+    },
+    {
+      "path": "skills/web-debug/SKILL.md",
+      "sha256": "2b1089842b3f2ddceb7fd2e9104006d301fc2fa197504ff3c4c6b31e7e45f450",
+      "bytes": 9050
+    },
+    {
+      "path": "skills/youtube-transcript/SKILL.md",
+      "sha256": "6cb45e4af00e4ae04d3821f1a27fb610d7b5bca1cb8434ae1d01ee2e0d8646b7",
+      "bytes": 1249
+    },
+    {
+      "path": "skills/youtube-transcript/fetch_transcript.py",
+      "sha256": "1105618b1d2434766eb4fc8507abb4dfc626782649dc784930ce5f357e577fc9",
+      "bytes": 3827
+    },
+    {
       "path": "tmux/tmux.conf",
       "sha256": "22b4ede758b55281504339eeb06f929cd0071b781e404d190526798fd3f511a4",
       "bytes": 264
