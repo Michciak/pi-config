@@ -30,7 +30,6 @@ def main():
         raise SystemExit(f"tmux server {selected!r} is not accessible. Use --current inside the working tmux session, or --server NAME. No runtime files changed.\n{probe.stderr.strip()}")
     backup = agent / "backups" / ("minimal-ui-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
     files = [(root / "tmux/tmux.conf", Path.home() / ".tmux.conf", "tmux.conf"),
-             (root / "scripts/tmux-paste.sh", agent / "bin/tmux-paste.sh", "tmux-paste.sh"),
              (root / "extensions/file-links.ts", agent / "extensions/file-links.ts", "file-links.ts"),
              (root / "extensions/interactive-subagents/index.ts", agent / "extensions/interactive-subagents/index.ts", "subagents-index.ts")]
     for source, target, name in files:
@@ -43,8 +42,7 @@ def main():
         shutil.copyfile(source, target)
         print("Installed", target)
     subprocess.run(tmux + ["source-file", str(Path.home() / ".tmux.conf")], check=True)
-    print("Applied to", selected, "with clipboard shortcuts and negotiated CSI-u keys.")
-    print("Restart Pi (not the tmux server) to renegotiate keyboard input. /reload is insufficient for keyboard changes.")
+    print("Applied to", selected, "without changing keyboard protocol or bindings.")
     if backup.exists():
         print("Backup:", backup)
     print("In Warp: choose Rider as the file-link editor; enable mouse + scroll reporting.")
