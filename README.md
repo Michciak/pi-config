@@ -21,9 +21,6 @@ pi
 
 In an existing Pi session, use `/reload` after changing extensions.
 
-For scrolling, copying, pasting, and subagent panes in Warp, see
-[the complete tmux workflow](docs/warp-tmux.md).
-
 ## Agents
 
 The merged profiles are `scout`, `researcher`, `worker`, `coder`, `detective`,

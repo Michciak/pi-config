@@ -211,16 +211,6 @@
       "bytes": 8719
     },
     {
-      "path": "scripts/apply-tmux.py",
-      "sha256": "cb0fc42e6248205d59bbce14d6f0808e113854e4879b72c3e7800b3296b7a889",
-      "bytes": 2468
-    },
-    {
-      "path": "scripts/tmux-paste.py",
-      "sha256": "36e44b1ff616f6ecb35a8baa092c43ddd40a4d2af402264ac9a59bed3feddba8",
-      "bytes": 1591
-    },
-    {
       "path": "settings/config.json",
       "sha256": "ba66c8a956e6bfd247b4646bb525f4b6c00e4f0df9da216b1fe5f20fd184acb7",
       "bytes": 42
@@ -322,8 +312,8 @@
     },
     {
       "path": "tmux/tmux.conf",
-      "sha256": "f724c6f747ce03f6029a8abd7d2df3ededaedc8fd8a376a4fd838e8d45eb45af",
-      "bytes": 3125
+      "sha256": "d055340b3aa2d9cd2d4c720fc3379fee5c4f7196c8d200b8d2dbff9c55ddd45c",
+      "bytes": 792
     }
   ],
   "runtimeSync": "Tracked source files only. These revisions are staged in a delivery repository; global runtime has not been updated."
