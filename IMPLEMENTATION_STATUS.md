@@ -71,3 +71,12 @@ explicitly reported as deferred.
 `scripts/audit-model-scope.py` compares `enabledModels` with Pi's current model
 catalog without changing scope. It returns exit code 2 when the catalog cannot
 be read, rather than falsely marking every pattern as missing.
+
+## Cursor CLI bridge
+
+The versioned package now includes `extensions/cursor-subagents.ts`, and the
+same extension is synchronized into `~/.pi/agent/extensions`. It exposes
+`cursor_coder`, `cursor_detective`, `cursor_fixer`, `cursor_inventor`,
+`cursor_planner`, and `cursor_reviewer` as read-only Cursor CLI delegates.
+A sandbox-side Pi model-list run still hit the known auth-lock `EPERM`; no
+extension-load error occurred.

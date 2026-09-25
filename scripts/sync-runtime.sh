@@ -13,6 +13,7 @@ compare() {
 rc=0
 for source in "$REPO_DIR"/agents/*.md; do compare "$source" "$PI_AGENT_DIR/agents/$(basename "$source")" || rc=1; done
 compare "$REPO_DIR/tmux/tmux.conf" "$HOME/.tmux.conf" || rc=1
+compare "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts" || rc=1
 for source in "$REPO_DIR"/skills/*; do
   target="$PI_AGENT_DIR/skills/$(basename "$source")"
   if [[ ! -d "$target" ]]; then print "MISSING $target"; rc=1
@@ -25,6 +26,9 @@ if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
   for source in "$REPO_DIR"/agents/*.md; do target="$PI_AGENT_DIR/agents/$(basename "$source")"; [[ -e "$target" ]] && cp "$target" "$backup/agents/"; cp "$source" "$target"; done
   [[ -e "$HOME/.tmux.conf" ]] && cp "$HOME/.tmux.conf" "$backup/tmux.conf"
   cp "$REPO_DIR/tmux/tmux.conf" "$HOME/.tmux.conf"; chmod 600 "$HOME/.tmux.conf"
+  mkdir -p "$PI_AGENT_DIR/extensions"
+  [[ -e "$PI_AGENT_DIR/extensions/cursor-subagents.ts" ]] && cp "$PI_AGENT_DIR/extensions/cursor-subagents.ts" "$backup/cursor-subagents.ts"
+  cp "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts"
   mkdir -p "$backup/skills" "$PI_AGENT_DIR/skills"
   for source in "$REPO_DIR"/skills/*; do
     name=$(basename "$source"); target="$PI_AGENT_DIR/skills/$name"

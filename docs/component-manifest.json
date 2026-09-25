@@ -686,6 +686,11 @@
       "bytes": 2372
     },
     {
+      "path": "extensions/cursor-subagents.ts",
+      "sha256": "084959786fe132a466c3b5223bdd0191be858483c76d965e0568d239c25bd8cc",
+      "bytes": 2797
+    },
+    {
       "path": "extensions/custom-header.ts",
       "sha256": "7ebd2e1116971eae5b2ffa0def5dddef7bba58e8a1ed5f767c4b866d8c558ee7",
       "bytes": 3847
