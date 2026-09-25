@@ -752,8 +752,8 @@
     },
     {
       "path": "extensions/model-router.ts",
-      "sha256": "f66ddfc989afcd463c798a87a0ac87894274e9051731ef37395e6363e571b2b4",
-      "bytes": 2330
+      "sha256": "c4c6beb3d6c9ae41f284802e4ccbd1e3726b58c464d8f2d21f8b5bc6d1b4b63d",
+      "bytes": 3142
     },
     {
       "path": "extensions/prompt-snippets/README.md",
@@ -11357,8 +11357,8 @@
     },
     {
       "path": "tmux/tmux.conf",
-      "sha256": "22b4ede758b55281504339eeb06f929cd0071b781e404d190526798fd3f511a4",
-      "bytes": 264
+      "sha256": "ef8678220b8e1ece31895de6929c263d68b5274516d516a3182e966233e514e2",
+      "bytes": 341
     }
   ],
   "runtimeSync": "Global Pi resources were synchronized from these files; auth and runtime state are excluded."
