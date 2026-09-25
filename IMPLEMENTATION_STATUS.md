@@ -19,3 +19,12 @@
 ## Current stage
 
 Stage 0 baseline captured. Next: reconcile agent definitions and package provenance, then test the merged subagent surface.
+
+## Verification
+
+- Global agent profiles are synchronized from this repository's `agents/`
+  directory; the previous versions are preserved in `backups/`.
+- Pi `--help`, `--list-models`, and `pi list` start without the previous
+  interactive-subagents config error.
+- The active model catalog warns about unavailable configured patterns; those
+  warnings are pre-existing and are not changed in this stage.
