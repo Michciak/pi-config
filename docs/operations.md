@@ -42,3 +42,7 @@ uses conservative task categories (`coding`, `research`, `reasoning`, `fast`,
 `general`) and ranks only models already present in the active Pi scope. It is
 explicit by design: ordinary prompts and manual `/model` selections are not
 overridden automatically.
+
+`/route <task>` selects the model and immediately submits the task in the
+current Pi session. It does not create a tmux pane. Use `/subagent <agent>
+<task>` when the task should run in a separate interactive-subagents pane.

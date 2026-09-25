@@ -39,6 +39,7 @@ export default function modelRouter(pi: ExtensionAPI) {
       const selected = await pi.setModel(model);
       if (selected) {
         ctx.ui.notify(`Router: ${role} → ${ref(model)}`, "info");
+        await pi.sendUserMessage(task);
         return;
       }
     }
