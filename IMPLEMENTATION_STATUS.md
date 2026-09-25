@@ -1,82 +1,67 @@
 # Pi local implementation status
 
+Updated: 2026-09-25
+Repository: `/Users/michalkozinski/projects/pi-config`
+
+## User decisions
+
+- Local LLM servers are deferred.
+- The currently selected Pi model remains the orchestrator.
+- The existing Pi model scope remains authoritative.
+- Global Pi configuration may be modified after preserving a backup.
+- Cursor agent names are merged with Pi's `scout`/`researcher`/`worker` roles.
+- Changes are made in small commits.
+
 ## Baseline
 
 - Host: macOS, zsh, Warp, tmux 3.7c
 - Pi: 0.87.1
 - Node: 26.9.0
-- Default orchestrator: `openai-codex/gpt-5.5`
-- Local LLM endpoints: intentionally deferred; 8080 and 8081 are not active
-- Secrets: remain in `~/.pi/agent/auth.json`; no secrets are tracked here
+- Current orchestrator: `openai-codex/gpt-5.5`
+- Active scope: 25 entries
+- Local endpoints 8080/8081: inactive and intentionally deferred
+- Secrets: remain in `~/.pi/agent/auth.json`; no secrets are tracked
 
-## Decisions
+## Plan progress
 
-- Use the currently selected Pi model as orchestrator.
-- Keep the existing model scope; do not introduce a router outside that scope.
-- Preserve Cursor configuration and merge Cursor agent names with Pi subagent roles.
-- Make small, tested commits per implementation stage.
+| Plan stage | Status | Result |
+|---|---|---|
+| 0. Audit/baseline | Partial | Runtime audited; repo created; non-secret baseline captured. A separate auth backup was intentionally not copied. |
+| 1. Local Qwen default | Deferred | Superseded by the decision to defer local LLMs. |
+| 2. Curated model scope | Adapted | Existing 25-entry scope preserved and documented; no automatic pruning. |
+| 3. Upstream integration/provenance | Complete for imported components | Manifest, hashes, package structure, and source references recorded. |
+| 4. Pi tools | Integrated, runtime pre-existing | Selected extensions are versioned and present globally; package migration remains separate. |
+| 5. Skills | Integrated, runtime pre-existing | Four existing skills are versioned and included in the package manifest. |
+| 6. Namespace compatibility | Smoke-checked | Pi starts without extension-load errors in available checks; full Warp smoke test remains the authoritative test. |
+| 7. Failure/recovery workflow | Not started | Requires a dedicated fixture and real model run. |
+| 8. llama-server services | Deferred | Local LLMs are out of current scope. |
+| 9. Interactive subagents | Complete for initial set | tmux extension installed; `scout`, `researcher`, `worker` and merged Cursor profiles available. |
+| 10. Observational memory | Not started | Deliberately postponed until the core workflow is stable. |
+| 11. Providers | Existing configuration preserved | OpenAI/Codex, OpenRouter, Cursor, OpenCode and Copilot entries remain in current Pi scope. |
+| 12. MCP | Not started | No MCP server has been added. |
+| 13. Capability registry | Scaffold complete | Registry covers all active scope entries with conservative unverified fields and validation. |
+| 14. Quota/cost adapters | Not started | No provider quota API was introduced. |
+| 15. Model router | Intentionally not started | Current selected model remains orchestrator; scope is not overridden. |
+| 16. Repository structure | Mostly complete | Package, agents, extensions, skills, scripts, docs, and settings are versioned. |
+| 17. Health check | Complete | Read-only health check covers runtime, agents, skills, scope, registry, and auth permissions. |
+| 18. GLM-5.3 compatibility | Deferred | Local model work is out of current scope. |
 
-## Current stage
+## Available operations
 
-Stage 0 baseline captured. Agent definitions are merged. The repository now has a Pi package manifest and recorded upstream provenance. Next: test the package in an isolated invocation before changing global package declarations.
+```sh
+./scripts/health-check.sh
+./scripts/sync-runtime.sh --check
+python3 ./scripts/audit-model-scope.py
+python3 ./scripts/validate-capability-registry.py
+```
 
-## Verification
+`sync-runtime.sh --apply` backs up and synchronizes only versioned agents,
+skills, Cursor bridge, and tmux configuration. It does not modify auth,
+settings, model cache, scope, or sessions.
 
-- Global agent profiles are synchronized from this repository's `agents/`
-  directory; the previous versions are preserved in `backups/`.
-- Pi `--help`, `--list-models`, and `pi list` start without the previous
-  interactive-subagents config error.
-- The active model catalog warns about unavailable configured patterns; those
-  warnings are pre-existing and are not changed in this stage.
+## Next recommended stage
 
-
-Package manifest: `package.json` declares the selected extension roots. It has not yet been added to global `settings.json`; isolated package testing comes first.
-
-## Package smoke test
-
-The package manifest is committed. A sandbox-side `pi -e` smoke test could not
-acquire Pi's runtime locks under `~/.pi/agent`; it reported `EPERM` while
-opening settings/auth locks. No runtime or secret files were changed. The
-remaining smoke test should be run from the user's Warp terminal before adding
-this local package to global settings.
-
-## tmux/Warp scrollback
-
-Added `tmux/tmux.conf` and installed it as `~/.tmux.conf` with mouse support,
-20,000 lines of history, and vi copy mode. Existing tmux sessions need
-`tmux source-file ~/.tmux.conf` or a restart to load it.
-
-## Component manifest
-
-`docs/component-manifest.json` records SHA-256 hashes for the versioned agent,
-extension, and tmux resources. It is a reviewable baseline for future runtime
-synchronization; it does not contain credentials or session state.
-
-## Runtime synchronization
-
-`scripts/sync-runtime.sh --check` compares versioned agent profiles and tmux
-configuration without reading secrets. `--apply` backs up only the files it
-will replace and then synchronizes them. Pi settings, model scope, auth, and
-session state are intentionally outside its write set.
-
-## Health check
-
-`scripts/health-check.sh` performs a read-only local check of Pi, tmux, the
-current orchestrator, model-scope size, auth file permissions (without reading
-contents), merged agents, and repository manifests. Local LLM checks are
-explicitly reported as deferred.
-
-## Model-scope audit
-
-`scripts/audit-model-scope.py` compares `enabledModels` with Pi's current model
-catalog without changing scope. It returns exit code 2 when the catalog cannot
-be read, rather than falsely marking every pattern as missing.
-
-## Cursor CLI bridge
-
-The versioned package now includes `extensions/cursor-subagents.ts`, and the
-same extension is synchronized into `~/.pi/agent/extensions`. It exposes
-`cursor_coder`, `cursor_detective`, `cursor_fixer`, `cursor_inventor`,
-`cursor_planner`, and `cursor_reviewer` as read-only Cursor CLI delegates.
-A sandbox-side Pi model-list run still hit the known auth-lock `EPERM`; no
-extension-load error occurred.
+Run the full smoke test from Warp, where Pi can acquire its normal runtime
+locks and model catalog. Then decide whether to build the failure/recovery
+fixture (plan stage 7) or add one MCP integration. No router or local-model
+work is needed for the current direction.
