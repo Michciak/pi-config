@@ -26,8 +26,9 @@ function classify(task: string): Role {
 
 function ref(model: any): string { return `${model.provider}/${model.id}`; }
 
-function eligible(model: any): boolean {
+function eligible(model: any, ctx: any): boolean {
   const path = process.env.PI_ROUTER_CAPABILITIES || join(homedir(), "projects", "pi-config", "settings", "model-capabilities.json");
+  if (!UNSUPPORTED_FOR_CODEX_CHATGPT.has(ref(model)) && ctx?.modelRegistry?.hasConfiguredAuth && !ctx.modelRegistry.hasConfiguredAuth(model)) return false;
   if (!existsSync(path)) return !UNSUPPORTED_FOR_CODEX_CHATGPT.has(ref(model));
   try {
     const entry = JSON.parse(readFileSync(path, "utf8")).models?.[ref(model)];
@@ -52,7 +53,7 @@ export default function modelRouter(pi: ExtensionAPI) {
       const pb = PROVIDER_PRIORITY[role].indexOf(b.provider);
       return (pa < 0 ? 999 : pa) - (pb < 0 ? 999 : pb);
     });
-    const eligibleRanked = ranked.filter((model: any) => eligible(model));
+    const eligibleRanked = ranked.filter((model: any) => eligible(model, ctx));
     if (explain) {
       const preview = eligibleRanked.slice(0, 5).map(ref).join(", ") || "(none)";
       ctx.ui.notify(`Router ${role}: ${preview}`, "info");
