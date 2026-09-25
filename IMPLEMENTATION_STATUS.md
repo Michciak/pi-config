@@ -103,3 +103,22 @@ now copies the router and its four changed interactive-subagents dependencies.
 No credentials, Cursor settings, global scope, or provider configuration changed.
 Remaining: deployment/live acceptance, inference failure classification and recovery,
 quota integration, observational memory, and a selected MCP integration.
+
+## Warp/tmux input regression — prepared 2026-09-25
+
+Confirmed in the deployed file: `send-keys -X scroll-up -N 5` leaves `-N 5`
+after the copy-mode command. tmux 3.7 rejects those extra arguments silently,
+leaving a static copy-mode screen. The earlier clipboard workaround also stole
+Pi's Ctrl+V shortcut and used unbracketed, newline-truncating paste.
+
+The delivery now fixes flag ordering, first-wheel movement, hovered-pane targets,
+return to live view and Escape. It retains Pi Ctrl+V, sends mouse selections to
+macOS through copy-command, and provides prefix P for exact multiline text paste
+to the originating pane. See `docs/warp-tmux.md` for the complete workflow.
+
+Eight clipboard/installer tests pass. The real tmux/PTY regression runner is
+blocked here by sandbox denial of private UNIX socket creation (exit 2, not a
+pass). The deployment script runs it before replacing live configuration.
+The tmux-only installer backs up only its two target files, installs atomically
+per file and reloads an accessible tmux server. No Pi restart is required.
+Actual Warp UI acceptance and deployment of this revision remain pending.
