@@ -40,6 +40,13 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 | 17 health check | **PARTIAL** | Basic/deep health działają; nie sprawdzają jeszcze wszystkich wymaganych extension/subagent/memory states. |
 | 18 GLM-5.3 | **NOT DONE** | Model zachowany, ale nie wykonano nowego compatibility testu. |
 
+## Nowe wdrożenia po audycie
+
+- Minimalny MCP stdio server + Pi bridge: `config_status` i `provider_quota_status`.
+- OpenRouter credits quota jest odczytywane; bieżące remaining: `0`.
+- OpenAI Codex OAuth przez `/login` przeszedł inference; quota pozostaje jawnie nieznane.
+- Realny memory test utworzył durable memory i został wznowiony przez `/om:status`.
+
 ## Wniosek
 
 Plan **nie jest w całości zrealizowany**. Fundament lokalny, scope, Qwen,
