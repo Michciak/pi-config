@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 const qwen = "local-qwen36/unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_M";
 const glm = "local-glm/ggml-org/GLM-4.7-Flash-GGUF:Q4_K";
 const keyFile = "/etc/llama-server/glm-api-key";
+import { checkQuotas } from "./quota-check.mjs";
 
 async function localState(model, port) {
   const state = { provider: model.split("/", 1)[0], healthy: false, quotaKnown: false, updatedAt: new Date().toISOString() };
@@ -18,12 +19,15 @@ async function localState(model, port) {
 }
 
 export async function collectRuntimeState() {
+  const quotas = await checkQuotas();
   return {
     [qwen]: await localState(qwen, 8081),
     [glm]: await localState(glm, 8080),
     "openrouter/auto": {
-      provider: "openrouter", healthy: undefined, quotaKnown: false,
-      authConfigured: true, updatedAt: new Date().toISOString(),
+      provider: "openrouter", healthy: undefined,
+      quotaKnown: quotas.openrouter.quotaKnown,
+      quotaRemaining: quotas.openrouter.remaining,
+      authConfigured: quotas.openrouter.configured, updatedAt: new Date().toISOString(),
     },
   };
 }

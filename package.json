@@ -5,7 +5,7 @@
   "description": "Curated local Pi configuration and orchestration extensions",
   "keywords": ["pi-package"],
   "pi": {
-    "extensions": ["./extensions/*.ts", "./extensions/*/index.ts", "./extensions/interactive-subagents/subagents/index.ts", "./extensions/observational-memory/src/index.ts"],
+    "extensions": ["./extensions/*.ts", "./extensions/*/index.ts", "./extensions/interactive-subagents/subagents/index.ts", "./extensions/observational-memory/src/index.ts", "./extensions/mcp/index.ts"],
     "skills": ["./skills/*/SKILL.md"],
     "prompts": ["./prompts/*.md"]
   },
