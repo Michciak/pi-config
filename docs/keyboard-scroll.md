@@ -1,0 +1,25 @@
+# Keyboard-only history in tmux
+
+Apply delivery `--keyboard-scroll` from a shell inside the target tmux session
+(Ctrl+b then c). No Warp preferences or mouse/clipboard/protocol options change.
+The installer appends a managed block to ~/.tmux.conf and backs up the old file.
+
+- Fn+Up (PageUp): enter history and scroll up a page.
+- Fn+Down (PageDown), while in history: scroll down, exit at the bottom.
+- Escape or q, while in history: immediately return to the live pane.
+
+Exiting copy-mode discards the history cursor and returns keyboard input to the
+underlying application. If Pi was waiting for a prompt, typing continues there.
+This does not dismiss Pi dialogs, interrupt running tools, or force editor focus
+when Pi itself is showing a modal. No keystroke is injected into Pi on exit.
+
+Ctrl+O in Pi 0.87.1 invokes toggleToolOutputExpansion/setToolsExpanded and loops
+over all expandable children. The supported extension UI API likewise exposes
+only getToolsExpanded/setToolsExpanded. A tmux history cursor has no mapping to
+Pi tool components. Expanding a specific tool under that cursor is not implemented;
+it requires application-level navigation and per-component expansion in Pi.
+Return with Escape before using Pi's existing global Ctrl+O.
+
+Verified against the installed tmux 3.7c manual (copy-mode -e/-u and
+page-down-and-cancel). Installer tested with a temporary home and simulated tmux;
+live input behavior awaits application on the user's terminal.
