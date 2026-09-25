@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import tempfile
 
@@ -36,12 +37,17 @@ def clipboard_rollback(tmux):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--rollback-clipboard", action="store_true")
+    parser.add_argument("--warp-clipboard", action="store_true")
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--server", default="pi-baseline")
     selection.add_argument("--current", action="store_true", help="Apply to the tmux server of this shell")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     agent = Path.home() / ".pi/agent"
+    warp_keys = Path.home() / ".warp/keybindings.yaml"
+    warp_source = root / "warp/keybindings.yaml"
+    if args.warp_clipboard and warp_keys.exists() and warp_keys.read_bytes() != warp_source.read_bytes():
+        raise SystemExit("Existing Warp keybindings preserved. Set Copy/Paste shortcuts in Warp Settings; no runtime files changed.")
     tmux = ["tmux", "-L", args.server]
     selected = args.server
     if args.current:
@@ -63,6 +69,8 @@ def main():
     files = [(root / "tmux/tmux.conf", Path.home() / ".tmux.conf", "tmux.conf"),
              (root / "extensions/file-links.ts", agent / "extensions/file-links.ts", "file-links.ts"),
              (root / "extensions/interactive-subagents/index.ts", agent / "extensions/interactive-subagents/index.ts", "subagents-index.ts")]
+    if args.warp_clipboard:
+        files.append((warp_source, warp_keys, "warp-keybindings.yaml"))
     for source, target, name in files:
         if target.exists() and target.read_bytes() == source.read_bytes():
             continue
@@ -84,7 +92,10 @@ def main():
     print("Applied to", selected, "without changing keyboard protocol or bindings.")
     if backup.exists():
         print("Backup:", backup)
-    print("In Warp: choose Rider as the file-link editor; enable mouse + scroll reporting.")
+    print("Mouse disabled in tmux. Scroll: Ctrl+b then [, arrows/PageUp/PageDown, q to return before pasting.")
+    if args.warp_clipboard:
+        print("Restart Warp to load Cmd+Shift+C / Cmd+Shift+V. Copy Command moves to Cmd+Option+C.")
+        print("After restarting Warp, reattach with:", shlex.join(tmux + ["attach-session"]))
     print("In Pi: /reload loads file links and refreshes hyperlink capability detection.")
 
 

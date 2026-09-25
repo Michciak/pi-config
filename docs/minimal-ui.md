@@ -1,68 +1,28 @@
-# Minimal Pi + tmux + Warp additions
+# Pi in tmux: native clipboard, keyboard scrolling
 
-## Rollback and native Warp clipboard preference
+Mouse handling is disabled in tmux (`set -g mouse off`). Select text normally
+by dragging in Warp. Keyboard scroll: Ctrl+b, release, then [; use arrows or
+PageUp/PageDown (Fn+Up/Fn+Down on compact Mac keyboards). Press q to return to Pi
+before pasting. Up/Down at the live prompt remain Pi prompt-history controls.
 
-The b0f048b clipboard/CSI-u change was reverted at the user's request.
-Run delivery with `--minimal-ui --current --rollback-clipboard` inside tmux to
-also restore the seven changed live key bindings and the two keyboard options
-to this tmux version's defaults. Mouse scrolling and file links are retained.
-The removed clipboard helper is moved to the backup. Restart Pi afterward;
-the extended-key warning can return because those options are intentionally undone.
+Install with delivery `--minimal-ui --current --warp-clipboard` from a shell
+inside the current tmux session (Ctrl+b then c). The installer backs up changed
+files and applies mouse off without changing keyboard protocol. It also creates
+~/.warp/keybindings.yaml if absent, or accepts it if already identical; it stops
+before runtime edits if an unrelated keybindings file exists.
 
-In Warp Settings → Keyboard shortcuts, clear the existing Cmd+Shift+C binding
-for **Copy Command**, then assign **Copy** (`terminal:copy`) to Cmd+Shift+C and
-**Paste** (`terminal:paste`) to Cmd+Shift+V. Resolve any conflict marked orange.
-These are Warp actions, not key sequences sent to Pi. Native paste still requires
-leaving tmux copy-mode with q. The installer does not alter Warp preferences.
+Restart Warp to load its shortcuts. The tmux server is not restarted; reattach
+to the same server/session afterward. Copy is Cmd+Shift+C, Paste is Cmd+Shift+V.
+Copy Command moves to Cmd+Option+C to avoid conflict. No clipboard content is
+read by the installer. Mouse scrolling through tmux history is intentionally off.
 
-Warp's documented mouse behavior does not offer native selection without Shift
-while forwarding scroll to tmux: scroll reporting requires mouse reporting,
-and Shift is the documented bypass for native selection. Keep Shift+drag to
-retain the verified touchpad behavior. Turning mouse reporting off permits
-native selection but stops forwarding touchpad scrolling to tmux.
+The previous clipboard helper/CSI-u patch was reverted in Git. If its live
+settings still need undoing, add --rollback-clipboard and restart Pi afterward.
+The extended-key warning may return; it is unrelated to native Warp copy/paste.
 
-References: [Warp shortcuts](https://docs.warp.dev/getting-started/keyboard-shortcuts),
-[Warp mouse behavior](https://docs.warp.dev/terminal/more-features/full-screen-apps).
-
-Start from the confirmed working `pi-baseline` server. The tmux configuration
-contains only three options: mouse support, `pbcopy` as copy-command, and OSC 8
-hyperlink support for Warp's xterm-compatible terminal. All keyboard bindings and
-extended-key settings remain at the working defaults.
-
-`python3 scripts/install-minimal-ui.py` backs up and installs the tmux config,
-the Pi display extension, and the three-line subagent loader addition. It reloads
-only the named `pi-baseline` server. Use `--server NAME` if you named it differently.
-It never selects the old default server automatically. Run `/reload` in Pi to
-load the extension; newly started subagents receive it too. Existing child Pi
-processes must also reload/restart to load a new extension.
-
-If the working server is not named `pi-baseline`, open a shell within the working
-tmux session with Ctrl+b, then c. Run the installer with `--current` (or the
-delivery command with `--minimal-ui --current`). This explicitly selects the
-socket from that shell's `TMUX` variable; it does not guess another server.
-Return to the previous window with Ctrl+b, then p. The server name and session
-name are different things. A failed preflight changes no runtime files, even
-though the delivery may already have fast-forwarded the Git repository.
-
-In Warp Settings:
-
-1. Features → Terminal: enable Mouse Reporting and Scroll Reporting.
-2. Code → Editor and Code Review → Choose an editor to open file links: Rider.
-
-These are supported Warp settings; the installer does not overwrite Warp's
-preferences file or change system-wide file associations.
-
-| Action | Input |
-| --- | --- |
-| Scroll output | Two-finger touchpad scroll, using standard tmux mouse handling |
-| Keyboard scroll | Ctrl+b, then [; PageUp/PageDown (Fn+Up/Down on compact Mac keyboards), or arrows |
-| Return to live Pi | q while in copy-mode (counter visible in upper right) |
-| Copy through tmux | Drag to select, release to copy to macOS clipboard |
-| Copy through Warp | Hold Shift while selecting, then Cmd+C |
-| Paste | q if in copy-mode, then Cmd+V |
-| Paste image | Ctrl+V handled by Pi, unchanged |
-| Prompt history | Up/Down at the live Pi prompt, unchanged |
-| Open file | Cmd+click its hyperlink; hold Shift as well if tmux captures the click |
+Sources: [Warp keysets](https://github.com/warpdotdev/keysets),
+[Warp shortcuts](https://docs.warp.dev/getting-started/keyboard-shortcuts).
+Live Warp clipboard behavior still requires verification after applying.
 
 ## File links
 
