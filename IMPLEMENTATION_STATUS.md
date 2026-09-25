@@ -45,3 +45,9 @@ this local package to global settings.
 Added `tmux/tmux.conf` and installed it as `~/.tmux.conf` with mouse support,
 20,000 lines of history, and vi copy mode. Existing tmux sessions need
 `tmux source-file ~/.tmux.conf` or a restart to load it.
+
+## Component manifest
+
+`docs/component-manifest.json` records SHA-256 hashes for the versioned agent,
+extension, and tmux resources. It is a reviewable baseline for future runtime
+synchronization; it does not contain credentials or session state.
