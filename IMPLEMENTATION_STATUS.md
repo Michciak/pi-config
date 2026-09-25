@@ -71,3 +71,9 @@ capability validation both pass.
 `tests/failure-recovery-fixture` contains two intentional production defects
 and correct tests. The baseline failed two tests; the current orchestrator repaired
 only `src/math.js`, and the final test run passes both tests.
+
+## Router availability filter
+
+`openai-codex/gpt-5.3-codex-spark` remains in the user's configured scope but is
+excluded from automatic routing because Codex reports it unsupported for a
+ChatGPT account. The scope itself was not rewritten.

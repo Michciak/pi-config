@@ -15,7 +15,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Not supported when Codex uses a ChatGPT account; excluded from automatic routing.",
+      "eligibleForAutomaticRouting": false
     },
     "openai-codex/gpt-5.5": {
       "enabled": true,

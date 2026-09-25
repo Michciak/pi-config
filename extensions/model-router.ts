@@ -2,6 +2,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 type Role = "coding" | "research" | "reasoning" | "fast" | "general";
 
+const UNSUPPORTED_FOR_CODEX_CHATGPT = new Set(["openai-codex/gpt-5.3-codex-spark"]);
+
 const PROVIDER_PRIORITY: Record<Role, string[]> = {
   coding: ["cursor", "openai-codex", "opencode", "github-copilot", "openrouter"],
   research: ["openrouter", "openai-codex", "github-copilot", "opencode", "cursor"],
@@ -36,6 +38,7 @@ export default function modelRouter(pi: ExtensionAPI) {
       return (pa < 0 ? 999 : pa) - (pb < 0 ? 999 : pb);
     });
     for (const model of ranked) {
+      if (UNSUPPORTED_FOR_CODEX_CHATGPT.has(ref(model))) continue;
       const selected = await pi.setModel(model);
       if (selected) {
         ctx.ui.notify(`Router: ${role} → ${ref(model)}`, "info");
