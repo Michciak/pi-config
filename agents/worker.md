@@ -1,10 +1,9 @@
 ---
 name: worker
-description: General-purpose worker — reads, writes, and edits code
+description: General implementation worker with bounded delegation.
 tools: read, write, edit, bash, web_search, web_fetch
 subagent_agents: scout, researcher
-model: openrouter/z-ai/glm-5.3
-thinking: high
+thinking: medium
 system-prompt: append
 auto-exit: true
 ---

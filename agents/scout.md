@@ -1,9 +1,8 @@
 ---
 name: scout
-description: Fast codebase recon — explores files, finds patterns, maps architecture
+description: Fast read-only codebase reconnaissance.
 tools: read, grep, find, ls
-model: openrouter/z-ai/glm-5.3
-thinking: low
+thinking: medium
 system-prompt: append
 auto-exit: true
 ---
