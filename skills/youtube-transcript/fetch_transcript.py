@@ -13,10 +13,14 @@ import subprocess
 import tempfile
 import json
 
+YTDLP = os.environ.get("YTDLP_BIN") or shutil.which("yt-dlp") or os.path.join(
+    os.path.dirname(__file__), ".venv", "bin", "yt-dlp"
+)
+
 
 def get_metadata(url):
     cmd = [
-        "yt-dlp",
+        YTDLP,
         "--dump-json",
         "--no-warnings",
         "--skip-download",
@@ -62,7 +66,7 @@ def pick_english_lang(info):
 def download_subtitle(url, lang, is_auto, outdir):
     """Use yt-dlp to download the json3 subtitle file. Returns the file path."""
     cmd = [
-        "yt-dlp",
+        YTDLP,
         "--skip-download",
         "--no-warnings",
         "--sub-format", "json3",
