@@ -13,4 +13,4 @@ else
 fi
 printf '%s\n' '== Pi repair prompt =='
 printf '%s\n' "Run from Warp:"
-printf '%s\n' "pi --model '$MODEL' --workspace '$FIXTURE' -p --mode text -- \"Find and fix the production bugs in src/math.js. Do not modify tests. Run npm test after each change and finish only when every test passes.\""
+printf '%s\n' "cd '$FIXTURE' && pi --model '$MODEL' --no-session -p --mode text -- \"Find and fix the production bugs in src/math.js. Do not modify tests. Run npm test after each change and finish only when every test passes.\""
