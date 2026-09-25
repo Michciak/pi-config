@@ -69,7 +69,7 @@ Baseline audit complete; staged implementation is in progress.
 - Browser dependency smoke test passed: Chromium navigated to Example Domain, read DOM title, and wrote `/tmp/pi-config-example.png`.
 - Failure/recovery fixture at `~/projects/pi-qwen-recovery-fixture` demonstrates FAIL → production-only repair → PASS; final suite is 3/3 and tests were not modified during the repair.
 - GLM fallback was started for validation, reached `model loaded`/`listening` on 8080, then the kernel OOM killer stopped it while Qwen was also loaded; service templates now declare mutual conflicts and only one large local model should run at a time.
-- Skill checks: analyze-sessions cost report PASS; pdf-reader extracted `/usr/share/doc/speexdsp/manual.pdf`; YouTube remains unavailable because `yt-dlp` is not installed.
+- Skill checks: analyze-sessions cost report PASS; pdf-reader extracted `/usr/share/doc/speexdsp/manual.pdf`; yt-dlp 2026.08.19 is installed in the isolated youtube-transcript venv and the wrapper resolves it correctly.
 - Google web search remains unavailable until credentials are supplied by the user.
 - GLM fallback on 8080 is still stopped; this is expected because only Qwen was requested.
 - Live tmux spawn test passed in a disposable `pi-config-subagent-test` session: scout ran on local Qwen, read `README.md`, and returned `# Pi Configuration`; the test session was removed afterward.
