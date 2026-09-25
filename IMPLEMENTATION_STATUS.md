@@ -103,3 +103,14 @@ now copies the router and its four changed interactive-subagents dependencies.
 No credentials, Cursor settings, global scope, or provider configuration changed.
 Remaining: deployment/live acceptance, inference failure classification and recovery,
 quota integration, observational memory, and a selected MCP integration.
+
+## User-requested tmux reset — 2026-09-25
+
+The latest experimental Warp workflow was reverted. Before commit 81d1caa,
+tmux/tmux.conf was not tracked; no older original configuration is available
+in this repository. The new baseline therefore contains no custom directives.
+reset-tmux.py backs up the installed file and affected live bindings, obtains
+defaults from the installed tmux, restores only our changed keys/options and
+exits copy-mode without stopping Pi. Global application remains pending because
+this session was denied access to the live tmux socket before any file change.
+No new scroll or clipboard modifications are enabled on top of this baseline.

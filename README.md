@@ -21,6 +21,11 @@ pi
 
 In an existing Pi session, use `/reload` after changing extensions.
 
+Tmux is back at a zero-customization baseline: `tmux/tmux.conf` contains no
+key or mouse overrides. To undo our old bindings in a running server as well,
+run `python3 scripts/reset-tmux.py`. It backs up the previous configuration,
+restores only the keys/options changed by this project and keeps Pi sessions.
+
 ## Agents
 
 The merged profiles are `scout`, `researcher`, `worker`, `coder`, `detective`,

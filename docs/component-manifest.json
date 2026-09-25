@@ -312,8 +312,8 @@
     },
     {
       "path": "tmux/tmux.conf",
-      "sha256": "d055340b3aa2d9cd2d4c720fc3379fee5c4f7196c8d200b8d2dbff9c55ddd45c",
-      "bytes": 792
+      "sha256": "1fc3567c968b85a7ecc6d7959a061c5d386349d79d76b45c22aad1f56e316ea3",
+      "bytes": 210
     }
   ],
   "runtimeSync": "Tracked source files only. These revisions are staged in a delivery repository; global runtime has not been updated."
