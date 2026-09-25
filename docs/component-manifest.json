@@ -751,6 +751,11 @@
       "bytes": 1950
     },
     {
+      "path": "extensions/model-router.ts",
+      "sha256": "f66ddfc989afcd463c798a87a0ac87894274e9051731ef37395e6363e571b2b4",
+      "bytes": 2330
+    },
+    {
       "path": "extensions/prompt-snippets/README.md",
       "sha256": "ed65d27d14b7e39d0cd341742c26af498e7200b91a9d028963f5124c0508f462",
       "bytes": 2095
