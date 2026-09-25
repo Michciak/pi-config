@@ -31,7 +31,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openai-codex/gpt-5.6-luna": {
       "enabled": true,
@@ -46,7 +47,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openai-codex/gpt-5.6-sol": {
       "enabled": true,
@@ -61,7 +63,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openai-codex/gpt-5.6-terra": {
       "enabled": true,
@@ -76,7 +79,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openai-codex/gpt-6-astra": {
       "enabled": true,
@@ -91,7 +95,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openai-codex/gpt-6-luna": {
       "enabled": true,
@@ -106,7 +111,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openai-codex/gpt-6-sol": {
       "enabled": true,
@@ -121,7 +127,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openrouter/openrouter/auto": {
       "enabled": true,
@@ -136,7 +143,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openrouter/openrouter/free": {
       "enabled": true,
@@ -151,7 +159,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "openrouter/openrouter/fusion": {
       "enabled": true,
@@ -166,7 +175,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "github-copilot/claude-haiku-4.5": {
       "enabled": true,
@@ -181,7 +191,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "github-copilot/kimi-k3": {
       "enabled": true,
@@ -196,7 +207,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "github-copilot/gpt-5-mini": {
       "enabled": true,
@@ -211,7 +223,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "opencode/qwen3.8-flash": {
       "enabled": true,
@@ -226,7 +239,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "opencode/glm-5.3": {
       "enabled": true,
@@ -241,7 +255,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "opencode/glm-5.3-flash": {
       "enabled": true,
@@ -256,7 +271,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "opencode/kimi-k3": {
       "enabled": true,
@@ -271,7 +287,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "opencode/nemotron-3-ultra-free": {
       "enabled": true,
@@ -286,7 +303,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "cursor/composer-2.5": {
       "enabled": true,
@@ -301,7 +319,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "cursor/composer-latest": {
       "enabled": true,
@@ -316,7 +335,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "cursor/auto": {
       "enabled": true,
@@ -331,7 +351,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "cursor/grok-4.6": {
       "enabled": true,
@@ -346,7 +367,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "cursor/grok-4.7@256k:slow": {
       "enabled": true,
@@ -361,7 +383,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     },
     "cursor/grok-4.7@500k:slow": {
       "enabled": true,
@@ -376,7 +399,8 @@
       "latencyClass": null,
       "costClass": null,
       "quotaKnown": false,
-      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing."
+      "notes": "Scope entry imported from active Pi settings; verify in Warp before routing.",
+      "eligibleForAutomaticRouting": true
     }
   }
 }

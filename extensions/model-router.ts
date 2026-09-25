@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 type Role = "coding" | "research" | "reasoning" | "fast" | "general";
@@ -23,6 +26,17 @@ function classify(task: string): Role {
 
 function ref(model: any): string { return `${model.provider}/${model.id}`; }
 
+function eligible(model: any): boolean {
+  const path = process.env.PI_ROUTER_CAPABILITIES || join(homedir(), "projects", "pi-config", "settings", "model-capabilities.json");
+  if (!existsSync(path)) return !UNSUPPORTED_FOR_CODEX_CHATGPT.has(ref(model));
+  try {
+    const entry = JSON.parse(readFileSync(path, "utf8")).models?.[ref(model)];
+    return entry?.eligibleForAutomaticRouting !== false && !UNSUPPORTED_FOR_CODEX_CHATGPT.has(ref(model));
+  } catch {
+    return !UNSUPPORTED_FOR_CODEX_CHATGPT.has(ref(model));
+  }
+}
+
 export default function modelRouter(pi: ExtensionAPI) {
   const route = async (args: string, ctx: any) => {
     const task = args.trim();
@@ -38,7 +52,7 @@ export default function modelRouter(pi: ExtensionAPI) {
       return (pa < 0 ? 999 : pa) - (pb < 0 ? 999 : pb);
     });
     for (const model of ranked) {
-      if (UNSUPPORTED_FOR_CODEX_CHATGPT.has(ref(model))) continue;
+      if (!eligible(model)) continue;
       const selected = await pi.setModel(model);
       if (selected) {
         ctx.ui.notify(`Router: ${role} → ${ref(model)}`, "info");
