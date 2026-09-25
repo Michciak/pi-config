@@ -33,7 +33,7 @@ Repository: `/Users/michalkozinski/projects/pi-config`
 | 4. Pi tools | Integrated, runtime pre-existing | Selected extensions are versioned and present globally; package migration remains separate. |
 | 5. Skills | Integrated, runtime pre-existing | Four existing skills are versioned and included in the package manifest. |
 | 6. Namespace compatibility | Smoke-checked | Pi starts without extension-load errors in available checks; full Warp smoke test remains the authoritative test. |
-| 7. Failure/recovery workflow | Not started | Requires a dedicated fixture and real model run. |
+| 7. Failure/recovery workflow | Complete | Isolated fixture repaired by the current orchestrator; tests pass and only `src/math.js` changed. |
 | 8. llama-server services | Deferred | Local LLMs are out of current scope. |
 | 9. Interactive subagents | Complete for initial set | tmux extension installed; `scout`, `researcher`, `worker` and merged Cursor profiles available. |
 | 10. Observational memory | Not started | Deliberately postponed until the core workflow is stable. |
