@@ -31,3 +31,11 @@ Stage 0 baseline captured. Agent definitions are merged. The repository now has 
 
 
 Package manifest: `package.json` declares the selected extension roots. It has not yet been added to global `settings.json`; isolated package testing comes first.
+
+## Package smoke test
+
+The package manifest is committed. A sandbox-side `pi -e` smoke test could not
+acquire Pi's runtime locks under `~/.pi/agent`; it reported `EPERM` while
+opening settings/auth locks. No runtime or secret files were changed. The
+remaining smoke test should be run from the user's Warp terminal before adding
+this local package to global settings.
