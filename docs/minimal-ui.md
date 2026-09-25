@@ -1,5 +1,29 @@
 # Minimal Pi + tmux + Warp additions
 
+## Rollback and native Warp clipboard preference
+
+The b0f048b clipboard/CSI-u change was reverted at the user's request.
+Run delivery with `--minimal-ui --current --rollback-clipboard` inside tmux to
+also restore the seven changed live key bindings and the two keyboard options
+to this tmux version's defaults. Mouse scrolling and file links are retained.
+The removed clipboard helper is moved to the backup. Restart Pi afterward;
+the extended-key warning can return because those options are intentionally undone.
+
+In Warp Settings → Keyboard shortcuts, clear the existing Cmd+Shift+C binding
+for **Copy Command**, then assign **Copy** (`terminal:copy`) to Cmd+Shift+C and
+**Paste** (`terminal:paste`) to Cmd+Shift+V. Resolve any conflict marked orange.
+These are Warp actions, not key sequences sent to Pi. Native paste still requires
+leaving tmux copy-mode with q. The installer does not alter Warp preferences.
+
+Warp's documented mouse behavior does not offer native selection without Shift
+while forwarding scroll to tmux: scroll reporting requires mouse reporting,
+and Shift is the documented bypass for native selection. Keep Shift+drag to
+retain the verified touchpad behavior. Turning mouse reporting off permits
+native selection but stops forwarding touchpad scrolling to tmux.
+
+References: [Warp shortcuts](https://docs.warp.dev/getting-started/keyboard-shortcuts),
+[Warp mouse behavior](https://docs.warp.dev/terminal/more-features/full-screen-apps).
+
 Start from the confirmed working `pi-baseline` server. The tmux configuration
 contains only three options: mouse support, `pbcopy` as copy-command, and OSC 8
 hyperlink support for Warp's xterm-compatible terminal. All keyboard bindings and
