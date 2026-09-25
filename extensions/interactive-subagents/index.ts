@@ -838,6 +838,9 @@ function applySandboxToParts(
   loadout: SubagentLoadout,
   opts: { artifactDir: string; name: string },
 ): void {
+  // Display-only file links also apply to restricted subagent panes.
+  const fileLinks = join(SUBAGENTS_DIR, "..", "file-links.ts");
+  if (existsSync(fileLinks)) parts.push("-e", shellEscape(fileLinks));
   if (loadout.modelScope?.length) parts.push("--models", shellEscape(loadout.modelScope.join(",")));
   if (loadout.model) {
     const model = loadout.thinking ? `${loadout.model}:${loadout.thinking}` : loadout.model;

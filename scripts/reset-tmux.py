@@ -23,7 +23,6 @@ def run(command, *args, check=True):
 
 
 def main():
-    source = Path(__file__).resolve().parents[1] / "tmux/tmux.conf"
     target = Path.home() / ".tmux.conf"
     agent = Path.home() / ".pi/agent"
     live = ["tmux"]
@@ -83,7 +82,7 @@ def main():
                 run(live, "send-keys", "-t", fields[0], "-X", "cancel")
         if run(live, "show-options", "-gqv", "mouse").stdout.strip() != "off":
             raise RuntimeError("Mouse default was not restored; backup: " + str(backup))
-    shutil.copyfile(source, target)
+    target.write_text("# Standard tmux defaults; no custom settings.\n")
     target.chmod(0o600)
     helper = agent / "tmux/paste.py"
     if helper.exists():

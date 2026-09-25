@@ -16,6 +16,7 @@ for source in "$REPO_DIR"/agents/*.md; do compare "$source" "$PI_AGENT_DIR/agent
 compare "$REPO_DIR/tmux/tmux.conf" "$TMUX_CONFIG_FILE" || rc=1
 compare "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts" || rc=1
 compare "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts" || rc=1
+compare "$REPO_DIR/extensions/file-links.ts" "$PI_AGENT_DIR/extensions/file-links.ts" || rc=1
 for relative in index.ts session.ts status.ts routing.ts; do
   compare "$REPO_DIR/extensions/interactive-subagents/$relative" "$PI_AGENT_DIR/extensions/interactive-subagents/$relative" || rc=1
 done
@@ -36,6 +37,8 @@ if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
   cp "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts"
   [[ -e "$PI_AGENT_DIR/extensions/model-router.ts" ]] && cp "$PI_AGENT_DIR/extensions/model-router.ts" "$backup/model-router.ts"
   cp "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts"
+  [[ -e "$PI_AGENT_DIR/extensions/file-links.ts" ]] && cp "$PI_AGENT_DIR/extensions/file-links.ts" "$backup/file-links.ts"
+  cp "$REPO_DIR/extensions/file-links.ts" "$PI_AGENT_DIR/extensions/file-links.ts"
   mkdir -p "$backup/interactive-subagents" "$PI_AGENT_DIR/extensions/interactive-subagents"
   for relative in index.ts session.ts status.ts routing.ts; do
     target="$PI_AGENT_DIR/extensions/interactive-subagents/$relative"

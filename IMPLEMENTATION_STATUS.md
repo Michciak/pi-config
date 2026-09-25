@@ -114,3 +114,14 @@ defaults from the installed tmux, restores only our changed keys/options and
 exits copy-mode without stopping Pi. Global application remains pending because
 this session was denied access to the live tmux socket before any file change.
 No new scroll or clipboard modifications are enabled on top of this baseline.
+
+## Minimal UI additions after user-confirmed baseline
+
+The user confirmed normal operation in `tmux -L pi-baseline -f /dev/null`.
+The next opt-in delivery adds exactly three tmux options (mouse, copy-command,
+hyperlinks), retaining all working keyboard defaults. File links use Pi's
+supported Markdown transformer, including in newly started subagent panes.
+Eight link tests pass, including rendering OSC 8 through the installed Pi library.
+`deploy.py --minimal-ui` installs only this UI change and targets pi-baseline.
+Warp's file-link editor must be set to Rider through its supported Settings UI.
+Global installation and live Warp acceptance remain pending; see docs/minimal-ui.md.

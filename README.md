@@ -21,10 +21,10 @@ pi
 
 In an existing Pi session, use `/reload` after changing extensions.
 
-Tmux is back at a zero-customization baseline: `tmux/tmux.conf` contains no
-key or mouse overrides. To undo our old bindings in a running server as well,
-run `python3 scripts/reset-tmux.py`. It backs up the previous configuration,
-restores only the keys/options changed by this project and keeps Pi sessions.
+The confirmed working baseline now has three optional UI additions: tmux mouse
+support, native clipboard copying, and file hyperlinks opened by Warp in Rider.
+No keyboard/protocol overrides are added. See [minimal UI setup](docs/minimal-ui.md).
+`python3 scripts/reset-tmux.py` remains available to restore standard tmux defaults.
 
 ## Agents
 

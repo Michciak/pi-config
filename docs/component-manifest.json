@@ -106,6 +106,11 @@
       "bytes": 3847
     },
     {
+      "path": "extensions/file-links.ts",
+      "sha256": "5c0f9467f9b34bee5156ff03810224cbc9d3bd4a450f3daff20323cc2d4b2724",
+      "bytes": 3380
+    },
+    {
       "path": "extensions/interactive-subagents/activity.ts",
       "sha256": "2f8ef422f668e7e8fddfe084f37ebe6ee44865ce32c2a981a765bb6c213b2c61",
       "bytes": 16874
@@ -117,8 +122,8 @@
     },
     {
       "path": "extensions/interactive-subagents/index.ts",
-      "sha256": "4471705b2bdafe675afbfaede0f07113ce8de2def9a321313174504eff54764e",
-      "bytes": 100357
+      "sha256": "b258c4b04fd8b5b55829b9692b1cee38e0008c5f101d5126f7152e477a1255ed",
+      "bytes": 100562
     },
     {
       "path": "extensions/interactive-subagents/plugin/.claude-plugin/plugin.json",
@@ -312,8 +317,8 @@
     },
     {
       "path": "tmux/tmux.conf",
-      "sha256": "1fc3567c968b85a7ecc6d7959a061c5d386349d79d76b45c22aad1f56e316ea3",
-      "bytes": 210
+      "sha256": "9bd52eccaa7ca744e9662a5fda75b0f5f59ed76527b49c45809ef439be303fe5",
+      "bytes": 405
     }
   ],
   "runtimeSync": "Tracked source files only. These revisions are staged in a delivery repository; global runtime has not been updated."
