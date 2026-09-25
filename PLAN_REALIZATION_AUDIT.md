@@ -31,7 +31,7 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 | 8 llama services | **PARTIAL** | Qwen działa manualnie. GLM załadował się na 8080, ale przy równoległym Qwen kernel OOM killer zatrzymał usługę; jednostki mają teraz wzajemny `Conflicts=` i pozostają disabled. |
 | 9 interactive subagents | **PARTIAL/DONE CORE** | Pinned package, tmux, scoped agent models i live scout spawn/result działają. Nie testowano nested spawn ani wszystkich allowlistów. |
 | 10 observational memory | **PARTIAL/DONE CORE** | Package pinned i OFF domyślnie. Realny test utworzył `INDEX.md`, `JOURNEY.md`, topic file oraz run artifacts; wznowienie tej samej sesji `/om:status` działało. Pełna compaction pozostaje osobnym testem. |
-| 11 providers | **PARTIAL** | Local + OpenRouter są dostępne; OpenAI, Cursor i LightLLM nie są wdrożone. |
+| 11 providers | **PARTIAL** | Local + OpenRouter są dostępne; OpenAI Codex jest uwierzytelniony przez Pi `/login` i widoczny w katalogu, ale Cursor/LightLLM nie są skonfigurowane. |
 | 12 MCP | **DONE MINIMAL** | Dodano stdio MCP server i Pi bridge; `config_status` oraz `provider_quota_status` zostały odkryte i wywołane z Pi. |
 | 13 capability registry | **DONE STATIC** | `settings/model-capabilities.json` istnieje i jest używany przez router. |
 | 14 quota/cost adapters | **PARTIAL** | Dodano adapter OpenRouter credits oraz status OpenAI Codex OAuth (`quotaKnown=false` bez publicznego endpointu); cost telemetry pozostaje niepełne. |
