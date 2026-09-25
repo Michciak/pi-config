@@ -65,3 +65,9 @@ session state are intentionally outside its write set.
 current orchestrator, model-scope size, auth file permissions (without reading
 contents), merged agents, and repository manifests. Local LLM checks are
 explicitly reported as deferred.
+
+## Model-scope audit
+
+`scripts/audit-model-scope.py` compares `enabledModels` with Pi's current model
+catalog without changing scope. It returns exit code 2 when the catalog cannot
+be read, rather than falsely marking every pattern as missing.
