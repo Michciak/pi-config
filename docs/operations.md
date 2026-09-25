@@ -46,3 +46,7 @@ overridden automatically.
 `/route <task>` selects the model and immediately submits the task in the
 current Pi session. It does not create a tmux pane. Use `/subagent <agent>
 <task>` when the task should run in a separate interactive-subagents pane.
+
+Use `/route --explain <task>` to inspect the top eligible candidates without
+changing the active model or dispatching the task. Decisions are recorded in
+the Pi session as `router-decision` metadata without storing prompt text.

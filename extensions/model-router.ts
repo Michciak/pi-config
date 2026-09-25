@@ -39,7 +39,8 @@ function eligible(model: any): boolean {
 
 export default function modelRouter(pi: ExtensionAPI) {
   const route = async (args: string, ctx: any) => {
-    const task = args.trim();
+    const explain = args.trim().startsWith("--explain");
+    const task = args.trim().replace(/^--explain\s*/, "");
     if (!task) {
       ctx.ui.notify("Usage: /route <task description>", "warning");
       return;
@@ -51,15 +52,23 @@ export default function modelRouter(pi: ExtensionAPI) {
       const pb = PROVIDER_PRIORITY[role].indexOf(b.provider);
       return (pa < 0 ? 999 : pa) - (pb < 0 ? 999 : pb);
     });
-    for (const model of ranked) {
-      if (!eligible(model)) continue;
+    const eligibleRanked = ranked.filter((model: any) => eligible(model));
+    if (explain) {
+      const preview = eligibleRanked.slice(0, 5).map(ref).join(", ") || "(none)";
+      ctx.ui.notify(`Router ${role}: ${preview}`, "info");
+      pi.appendEntry("router-decision", { role, candidates: eligibleRanked.slice(0, 10).map(ref), explained: true });
+      return;
+    }
+    for (const model of eligibleRanked) {
       const selected = await pi.setModel(model);
       if (selected) {
         ctx.ui.notify(`Router: ${role} → ${ref(model)}`, "info");
+        pi.appendEntry("router-decision", { role, selected: ref(model), candidates: eligibleRanked.slice(0, 10).map(ref) });
         await pi.sendUserMessage(task);
         return;
       }
     }
+    pi.appendEntry("router-decision", { role, selected: null, candidates: eligibleRanked.slice(0, 10).map(ref) });
     ctx.ui.notify(`Router found no authenticated model for role ${role}; current model kept.`, "warning");
   };
 
