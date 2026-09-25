@@ -22,38 +22,35 @@ function classify(task: string): Role {
 function ref(model: any): string { return `${model.provider}/${model.id}`; }
 
 export default function modelRouter(pi: ExtensionAPI) {
-  pi.registerCommand("route", {
-    description: "Choose a model for a task from the active Pi scope",
-    handler: async (args, ctx) => {
-      const task = args.trim();
-      if (!task) {
-        ctx.ui.notify("Usage: /route <task description>", "warning");
+  const route = async (args: string, ctx: any) => {
+    const task = args.trim();
+    if (!task) {
+      ctx.ui.notify("Usage: /route <task description>", "warning");
+      return;
+    }
+    const role = classify(task);
+    const candidates = [...ctx.scopedModels].map((entry: any) => entry.model);
+    const ranked = candidates.sort((a: any, b: any) => {
+      const pa = PROVIDER_PRIORITY[role].indexOf(a.provider);
+      const pb = PROVIDER_PRIORITY[role].indexOf(b.provider);
+      return (pa < 0 ? 999 : pa) - (pb < 0 ? 999 : pb);
+    });
+    for (const model of ranked) {
+      const selected = await pi.setModel(model);
+      if (selected) {
+        ctx.ui.notify(`Router: ${role} → ${ref(model)}`, "info");
         return;
       }
-      const role = classify(task);
-      const candidates = [...ctx.scopedModels].map((entry) => entry.model);
-      const ranked = candidates.sort((a, b) => {
-        const pa = PROVIDER_PRIORITY[role].indexOf(a.provider);
-        const pb = PROVIDER_PRIORITY[role].indexOf(b.provider);
-        return (pa < 0 ? 999 : pa) - (pb < 0 ? 999 : pb);
-      });
-      for (const model of ranked) {
-        if (!pi.setModel) continue;
-        const selected = await pi.setModel(model);
-        if (selected) {
-          ctx.ui.notify(`Router: ${role} → ${ref(model)}`, "info");
-          return;
-        }
-      }
-      ctx.ui.notify(`Router found no authenticated model for role ${role}; current model kept.`, "warning");
-    },
-  });
+    }
+    ctx.ui.notify(`Router found no authenticated model for role ${role}; current model kept.`, "warning");
+  };
 
+  pi.registerCommand("route", {
+    description: "Choose a model for a task from the active Pi scope",
+    handler: route,
+  });
   pi.registerCommand("router", {
     description: "Alias for /route",
-    handler: async (args, ctx) => {
-      const command = pi.getCommands().find((entry) => entry.name === "route");
-      if (command) await command.handler(args, ctx);
-    },
+    handler: route,
   });
 }
