@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {pathToFileURL} from 'node:url';
+import {homedir} from 'node:os';
+import {resolve} from 'node:path';
+const runtime=process.env.PI_RUNTIME_DIR ?? `${homedir()}/.local/share/pi-runtime/0.87.1/node_modules/@earendil-works/pi-coding-agent`;
+const {loadExtensions}=await import(pathToFileURL(`${runtime}/dist/core/extensions/loader.js`));
+const root=resolve(import.meta.dirname,'../..');
+const result=await loadExtensions([`${root}/extensions/model-router.ts`,`${root}/extensions/interactive-subagents/index.ts`],root);
+test('actual Pi loader registers router and subagent tools without errors',()=>{assert.deepEqual(result.errors,[]);assert.ok(result.extensions[0].commands.has('route'));assert.ok(result.extensions[1].tools.has('subagent_message'))});
+const execute=(params,scopedModels=[])=>result.extensions[1].tools.get('subagent').definition.execute('test',params,undefined,undefined,{scopedModels,modelRegistry:{hasConfiguredAuth:()=>true}});
+test('real subagent tool refuses empty scope before any pane/session access',async()=>{const r=await execute({agent:'worker',task:'test'});assert.equal(r.isError,true);assert.equal(r.details.error,'model-routing')});
+test('real subagent tool refuses out-of-scope override',async()=>{const r=await execute({agent:'worker',task:'test',model:'cursor/other'},[{model:{provider:'cursor',id:'allowed'}}]);assert.equal(r.details.error,'model-routing')});
+test('real subagent tool selects executor then reports missing tmux',async()=>{delete process.env.TMUX;const params={agent:'worker',task:'test'};const r=await execute(params,[{model:{provider:'cursor',id:'allowed'}}]);assert.equal(params.model,'cursor/allowed');assert.match(r.content[0].text,/tmux/)});

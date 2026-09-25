@@ -1,3 +1,4 @@
+import { selectSubagentModel, rankedModels, ref as modelRef } from "./routing.ts";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { keyHint } from "@mariozechner/pi-coding-agent";
 import { Type, type Static } from "@sinclair/typebox";
@@ -105,7 +106,7 @@ const SubagentParams = Type.Object({
         "Has no effect on which agent runs — use `agent` for that.",
     }),
   ),
-  model: Type.Optional(Type.String({ description: "Model override (overrides agent default)" })),
+  model: Type.Optional(Type.String({ description: "Exact provider/model from active scope; omit for automatic selection by task and agent role" })),
   cwd: Type.Optional(
     Type.String({
       description:
@@ -837,6 +838,7 @@ function applySandboxToParts(
   loadout: SubagentLoadout,
   opts: { artifactDir: string; name: string },
 ): void {
+  if (loadout.modelScope?.length) parts.push("--models", shellEscape(loadout.modelScope.join(",")));
   if (loadout.model) {
     const model = loadout.thinking ? `${loadout.model}:${loadout.thinking}` : loadout.model;
     parts.push("--model", shellEscape(model));
@@ -1342,6 +1344,7 @@ async function launchSubagent(
     agent: params.agent ?? null,
     toolAllowlist,
     model: effectiveModel ?? null,
+    modelScope: (ctx as any).scopedModels?.map((entry: any) => modelRef(entry.model)),
     thinking: effectiveThinking ?? null,
     systemPromptMode: systemPromptMode ?? null,
     identity: identityInSystemPrompt ? identity : null,
@@ -1685,14 +1688,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       name: "subagent",
       label: "Subagent",
       description:
-        "Spawn a sub-agent in a dedicated terminal multiplexer pane. " +
+        "Spawn a sub-agent in a dedicated terminal multiplexer pane. Omit model for automatic role-based selection from the active scope; the coordinator model stays unchanged. " +
         "This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       promptSnippet:
-        "Spawn a sub-agent in a dedicated terminal multiplexer pane. " +
+        "Spawn a sub-agent in a dedicated terminal multiplexer pane. Omit model for automatic role-based selection from the active scope; the coordinator model stays unchanged. " +
         "This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
@@ -1756,6 +1759,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               error: SUBAGENT_ALLOWLIST ? "agent not in allowlist" : "unknown agent",
             },
           };
+        }
+
+        // Route before creating a pane or writing launch artifacts. Explicit
+        // model choices are validated against the same scope as automatic ones.
+        try {
+          params.model = selectSubagentModel(params.task, ctx, params.agent, params.model);
+        } catch (error) {
+          return { isError: true, content: [{ type: "text" as const, text: (error as Error).message }], details: { error: "model-routing" } };
         }
 
         // Validate prerequisites (need mux + a session file to derive the
@@ -2140,6 +2151,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             `Resuming would relaunch with all global extensions and the full toolset, so this is refused. ` +
             `Re-run the task as a fresh subagent instead.`;
           return { content: [{ type: "text" as const, text: err }], details: { error: err } };
+        }
+
+        // Revalidate old loadouts against the parent's current scope on resume.
+        try {
+          loadout.model = selectSubagentModel(params.message ?? "", ctx, loadout.agent ?? undefined, loadout.model ?? undefined);
+          loadout.modelScope = rankedModels("", ctx).map(modelRef);
+        } catch (error) {
+          return { isError: true, content: [{ type: "text" as const, text: (error as Error).message }], details: { error: "model-routing" } };
         }
 
         const resumedSessionId = entry.sessionId ?? getSessionId(sessionPath) ?? requestedName;

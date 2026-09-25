@@ -41,7 +41,7 @@ Repository: `/Users/michalkozinski/projects/pi-config`
 | 12. MCP | Not started | No MCP server has been added. |
 | 13. Capability registry | Scaffold complete | Registry covers all active scope entries with conservative unverified fields and validation. |
 | 14. Quota/cost adapters | Not started | No provider quota API was introduced. |
-| 15. Model router | Initial explicit version complete | `/route` classifies a task heuristically and selects only an authenticated model from `ctx.scopedModels`; automatic per-prompt routing is not enabled. |
+| 15. Model router | Implemented in delivery clone | `/route` retains the coordinator and requests delegation; subagent execution enforces scope and selects its model. Live acceptance pending. |
 | 16. Repository structure | Mostly complete | Package, agents, extensions, skills, scripts, docs, and settings are versioned. |
 | 17. Health check | Complete | Read-only health check covers runtime, agents, skills, scope, registry, and auth permissions. |
 | 18. GLM-5.3 compatibility | Deferred | Local model work is out of current scope. |
@@ -59,12 +59,11 @@ python3 ./scripts/validate-capability-registry.py
 skills, Cursor bridge, and tmux configuration. It does not modify auth,
 settings, model cache, scope, or sessions.
 
-## Next recommended stage
+## Next stage
 
-Choose one concrete P1 integration: observational memory or a named MCP server.
-The choice must include the intended data boundary and permissions. No router or
-local-model work is needed for the current direction. The latest health check and
-capability validation both pass.
+Deploy the workspace delivery commits and validate a real `/route` task inside
+Warp/tmux. Then implement provider failure classification and quota adapters.
+Memory and MCP remain unimplemented; no local LLM work is planned.
 
 ## Failure/recovery fixture
 
@@ -81,15 +80,26 @@ ChatGPT account. The scope itself was not rewritten.
 
 ## Verified delivery — 2026-09-25
 
-Changes committed in a workspace delivery clone because the original repository
-is read-only to this session. tmux changes preserved verbatim. Router: Polish
-classification, exact option parsing, three selection attempts, sanitized attempt
-metadata. Synchronization now copies the router and rechecks after apply.
-Eight mocked behavioral tests pass; they do not prove provider access or live
-tmux behavior. No global runtime deployment has occurred.
+Delivery clone only: changes are committed here, not deployed to the global runtime.
+The current coordinator is preserved. `/route` dispatches a coordinator prompt to
+use the existing subagent tool; executor selection occurs in that tool before
+pane creation. Explicit overrides must be eligible members of the active scope.
+Agent roles influence ranking. Reasoning capability and nonzero catalog price
+estimates supplement the provider preference policy; they do not prove quality,
+provider entitlement, or remaining quota. No inference-time automatic retry is
+performed, because it could repeat side effects.
 
-The router is still provider-priority based, not capability-scored orchestration.
-Inference-time fallback, subagent delegation, quota adapters and memory remain
-open. Authentication configuration is not proof of model entitlement.
-Component manifest now hashes Git-tracked resources only, excluding installed
-dependencies and transient files.
+Children receive the parent's model scope through `--models`; resume revalidates
+the saved model against the current parent scope. Existing agent identities,
+tool allowlists and asynchronous result delivery are retained.
+
+Validation: 17 behavioral/runtime tests passed with Pi 0.87.1. The actual Pi loader
+registers both extensions and all three subagent tools without errors. Global
+provider requests and live tmux result delivery were not tested. Synchronization
+was tested on an isolated configuration: backup, apply, check, idempotent apply.
+
+Commits also preserve the user's tmux configuration changes. Runtime synchronization
+now copies the router and its four changed interactive-subagents dependencies.
+No credentials, Cursor settings, global scope, or provider configuration changed.
+Remaining: deployment/live acceptance, inference failure classification and recovery,
+quota integration, observational memory, and a selected MCP integration.

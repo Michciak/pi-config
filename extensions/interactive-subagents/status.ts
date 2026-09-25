@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -172,7 +172,7 @@ function readStatusConfigFile(configPath: string, examplePath: string): { source
 
 export function loadStatusConfig(
   configPath = DEFAULT_STATUS_CONFIG_PATH,
-  examplePath = STATUS_CONFIG_EXAMPLE_PATH,
+  examplePath = existsSync(STATUS_CONFIG_EXAMPLE_PATH) ? STATUS_CONFIG_EXAMPLE_PATH : join(dirname(fileURLToPath(import.meta.url)), "config.json"),
 ): StatusConfig {
   const { sourcePath, rawConfig } = readStatusConfigFile(configPath, examplePath);
 

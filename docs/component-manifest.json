@@ -117,8 +117,8 @@
     },
     {
       "path": "extensions/interactive-subagents/index.ts",
-      "sha256": "0a438726c0a9e5bd02d0b87141b41238aae7c39ac2faa4f4a96eb0f5e1ecb1a4",
-      "bytes": 98901
+      "sha256": "4471705b2bdafe675afbfaede0f07113ce8de2def9a321313174504eff54764e",
+      "bytes": 100357
     },
     {
       "path": "extensions/interactive-subagents/plugin/.claude-plugin/plugin.json",
@@ -136,14 +136,19 @@
       "bytes": 2492
     },
     {
+      "path": "extensions/interactive-subagents/routing.ts",
+      "sha256": "b21ccb241388f5c78ce18f6492bba304866c8f4e3da15ee54b95090f8d0c0deb",
+      "bytes": 3896
+    },
+    {
       "path": "extensions/interactive-subagents/session.ts",
-      "sha256": "26ac6b2083759237279268610215439867e3513ffc542930bb10e55a2517e45c",
-      "bytes": 21703
+      "sha256": "cf6e0463bff8ae3457cb46ed1e99fe7516e98364787429824fd9de5cd714e422",
+      "bytes": 21728
     },
     {
       "path": "extensions/interactive-subagents/status.ts",
-      "sha256": "85e563db0d1e135e75883e3f59d5ffca6448b4a3dbd8af0a37da8efc4d412b41",
-      "bytes": 16919
+      "sha256": "c99c30af2085622b966ec7d44f50bd995c530f1ae03a84f5aeabdd2f9837a1e9",
+      "bytes": 17035
     },
     {
       "path": "extensions/interactive-subagents/subagent-done.ts",
@@ -162,8 +167,8 @@
     },
     {
       "path": "extensions/model-router.ts",
-      "sha256": "742229db4832e0a3111e0a789e9aa3e113a90d898559afc2867f3b17eed3725b",
-      "bytes": 4997
+      "sha256": "a94c5793e9050827087549763b790b286b71ba7a60df8ff0944a3bc2939f0083",
+      "bytes": 2296
     },
     {
       "path": "extensions/prompt-snippets/README.md",
@@ -204,6 +209,26 @@
       "path": "extensions/web-search/index.ts",
       "sha256": "f51ce07f6e221f4d3a33415066d52de9a35f7dc3d9011c6558e90f6a5c829ed4",
       "bytes": 8719
+    },
+    {
+      "path": "settings/config.json",
+      "sha256": "ba66c8a956e6bfd247b4646bb525f4b6c00e4f0df9da216b1fe5f20fd184acb7",
+      "bytes": 42
+    },
+    {
+      "path": "settings/model-capabilities.json",
+      "sha256": "1eb12835b7329b7d9cedfa1dd4482caaf81d2b7a6550abdcd0e0a2b261698bdf",
+      "bytes": 12494
+    },
+    {
+      "path": "settings/model-scope.md",
+      "sha256": "f0b38ae83755082cbad6b56ed030d688dd6c99c46feca504c032e137a474d01c",
+      "bytes": 1203
+    },
+    {
+      "path": "settings/settings.json",
+      "sha256": "18d4df08139dded679e3cbd2532b0b9117ec5d063df4e5fd5661ac1c743f11ee",
+      "bytes": 970
     },
     {
       "path": "skills/analyze-sessions/.gitignore",
