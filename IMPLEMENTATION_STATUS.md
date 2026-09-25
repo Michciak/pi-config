@@ -51,3 +51,10 @@ Added `tmux/tmux.conf` and installed it as `~/.tmux.conf` with mouse support,
 `docs/component-manifest.json` records SHA-256 hashes for the versioned agent,
 extension, and tmux resources. It is a reviewable baseline for future runtime
 synchronization; it does not contain credentials or session state.
+
+## Runtime synchronization
+
+`scripts/sync-runtime.sh --check` compares versioned agent profiles and tmux
+configuration without reading secrets. `--apply` backs up only the files it
+will replace and then synchronizes them. Pi settings, model scope, auth, and
+session state are intentionally outside its write set.
