@@ -64,6 +64,7 @@ Baseline audit complete; staged implementation is in progress.
 - Agent model choice is now orchestrator-owned: profiles have no model field, complex tasks default to local Qwen, and OpenRouter is permitted only with explicit `taskClass: simple`.
 - Added `scripts/runtime-state.mjs`; it produces non-secret health/quota snapshots consumed by the router. Current snapshot: Qwen healthy, GLM stopped, OpenRouter quota is known as zero.
 - Added a stdio MCP server/bridge with `mcp_config_status` and `mcp_provider_quota_status`; both were called successfully from Pi.
+- OpenAI Codex `/login` inference smoke test passed with `OPENAI_CODEX_HEALTH_OK`; quota remains explicitly unknown.
 - Real observational-memory test created `.memory/`, `INDEX.md`, `JOURNEY.md`, a topic file, observer/consolidator run artifacts, and resumed the same session successfully.
 
 - Qwen inference, Pi startup, and custom-tool orchestration are now passing on port 8081.
