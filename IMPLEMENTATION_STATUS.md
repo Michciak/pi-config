@@ -32,7 +32,7 @@ Repository: `/Users/michalkozinski/projects/pi-config`
 | 3. Upstream integration/provenance | Complete for imported components | Manifest, hashes, package structure, and source references recorded. |
 | 4. Pi tools | Integrated, runtime pre-existing | Selected extensions are versioned and present globally; package migration remains separate. |
 | 5. Skills | Integrated, runtime pre-existing | Four existing skills are versioned and included in the package manifest. |
-| 6. Namespace compatibility | Smoke-checked | Pi starts without extension-load errors in available checks; full Warp smoke test remains the authoritative test. |
+| 6. Namespace compatibility | Complete for current setup | Pi starts without extension-load errors in available checks; user confirmed the integrated runtime works in Warp. |
 | 7. Failure/recovery workflow | Complete | Isolated fixture repaired by the current orchestrator; tests pass and only `src/math.js` changed. |
 | 8. llama-server services | Deferred | Local LLMs are out of current scope. |
 | 9. Interactive subagents | Complete for initial set | tmux extension installed; `scout`, `researcher`, `worker` and merged Cursor profiles available. |
@@ -61,14 +61,13 @@ settings, model cache, scope, or sessions.
 
 ## Next recommended stage
 
-Run the full smoke test from Warp, where Pi can acquire its normal runtime
-locks and model catalog. Then decide whether to build the failure/recovery
-fixture (plan stage 7) or add one MCP integration. No router or local-model
-work is needed for the current direction.
+Choose one concrete P1 integration: observational memory or a named MCP server.
+The choice must include the intended data boundary and permissions. No router or
+local-model work is needed for the current direction. The latest health check and
+capability validation both pass.
 
 ## Failure/recovery fixture
 
 `tests/failure-recovery-fixture` contains two intentional production defects
-and correct tests. The baseline is verified to fail two tests. Use
-`scripts/run-failure-recovery-test.sh` from Warp to run the current Pi model
-against the isolated fixture; tests must remain unchanged.
+and correct tests. The baseline failed two tests; the current orchestrator repaired
+only `src/math.js`, and the final test run passes both tests.
