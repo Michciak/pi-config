@@ -12,6 +12,14 @@ It never selects the old default server automatically. Run `/reload` in Pi to
 load the extension; newly started subagents receive it too. Existing child Pi
 processes must also reload/restart to load a new extension.
 
+If the working server is not named `pi-baseline`, open a shell within the working
+tmux session with Ctrl+b, then c. Run the installer with `--current` (or the
+delivery command with `--minimal-ui --current`). This explicitly selects the
+socket from that shell's `TMUX` variable; it does not guess another server.
+Return to the previous window with Ctrl+b, then p. The server name and session
+name are different things. A failed preflight changes no runtime files, even
+though the delivery may already have fast-forwarded the Git repository.
+
 In Warp Settings:
 
 1. Features → Terminal: enable Mouse Reporting and Scroll Reporting.

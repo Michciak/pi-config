@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install the minimal UI additions on the known-good pi-baseline server."""
 import argparse
+import os
 from datetime import datetime
 from pathlib import Path
 import shutil
@@ -9,15 +10,24 @@ import subprocess
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--server", default="pi-baseline")
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--server", default="pi-baseline")
+    selection.add_argument("--current", action="store_true", help="Apply to the tmux server of this shell")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     agent = Path.home() / ".pi/agent"
     tmux = ["tmux", "-L", args.server]
+    selected = args.server
+    if args.current:
+        context = os.environ.get("TMUX", "").rsplit(",", 2)
+        if len(context) != 3 or not context[0] or not all(part.isdigit() for part in context[1:]):
+            raise SystemExit("Run --current from a shell inside the working tmux session (Ctrl+b, then c). No runtime files changed.")
+        selected = context[0]
+        tmux = ["tmux", "-S", selected]
     # Read-only preflight; do not touch the user's other (formerly broken) server.
     probe = subprocess.run(tmux + ["list-sessions"], capture_output=True, text=True)
     if probe.returncode or not probe.stdout.strip():
-        raise SystemExit("The clean tmux server is not accessible. Keep the working pi-baseline session open. No files changed.")
+        raise SystemExit(f"tmux server {selected!r} is not accessible. Use --current inside the working tmux session, or --server NAME. No runtime files changed.\n{probe.stderr.strip()}")
     backup = agent / "backups" / ("minimal-ui-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
     files = [(root / "tmux/tmux.conf", Path.home() / ".tmux.conf", "tmux.conf"),
              (root / "extensions/file-links.ts", agent / "extensions/file-links.ts", "file-links.ts"),
@@ -32,7 +42,7 @@ def main():
         shutil.copyfile(source, target)
         print("Installed", target)
     subprocess.run(tmux + ["source-file", str(Path.home() / ".tmux.conf")], check=True)
-    print("Applied to", args.server, "without changing keyboard protocol or bindings.")
+    print("Applied to", selected, "without changing keyboard protocol or bindings.")
     if backup.exists():
         print("Backup:", backup)
     print("In Warp: choose Rider as the file-link editor; enable mouse + scroll reporting.")
