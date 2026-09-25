@@ -18,7 +18,7 @@
 
 ## Current stage
 
-Stage 0 baseline captured. Next: reconcile agent definitions and package provenance, then test the merged subagent surface.
+Stage 0 baseline captured. Agent definitions are merged. The repository now has a Pi package manifest and recorded upstream provenance. Next: test the package in an isolated invocation before changing global package declarations.
 
 ## Verification
 
@@ -28,3 +28,6 @@ Stage 0 baseline captured. Next: reconcile agent definitions and package provena
   interactive-subagents config error.
 - The active model catalog warns about unavailable configured patterns; those
   warnings are pre-existing and are not changed in this stage.
+
+
+Package manifest: `package.json` declares the selected extension roots. It has not yet been added to global `settings.json`; isolated package testing comes first.
