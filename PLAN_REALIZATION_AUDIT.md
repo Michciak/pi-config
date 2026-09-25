@@ -25,10 +25,10 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 | 2 curated scope | **DONE** | Scope, exact IDs, katalog i capability registry są; router testuje granicę scope. |
 | 3 provenance Amos | **DONE** | `docs/upstream-components.md`, przypięte SHA i lokalne modyfikacje. |
 | 4 extensions | **PARTIAL** | Wszystkie komponenty są skopiowane i zależności zainstalowane; web-fetch działa, web-search poprawnie zgłasza brak credentials. Brakuje pełnych testów popup bash-guard, prompt-snippets i `/browser on` w interaktywnym UI. |
-| 5 skills | **PARTIAL** | Skills są obecne, PDF venv istnieje; brakuje fixture/invocation testów dla każdego skilla. |
+| 5 skills | **PARTIAL** | Skills są obecne; `analyze-sessions` cost report i `pdf-reader` na `/usr/share/doc/speexdsp/manual.pdf` działają. Brakuje pełnych invocation testów pozostałych skilli; YouTube blokuje brak `yt-dlp`. |
 | 6 namespace compatibility | **PARTIAL** | Pi package smoke test działa; nie wykonano osobnego smoke testu każdego extension. |
 | 7 failure/recovery | **PARTIAL** | Fixture kończy się 3/3 PASS bez zmian testów; pełny model-driven workflow nie został jednoznacznie ukończony. |
-| 8 llama services | **PARTIAL** | User-unit templates są zainstalowane, disabled/stopped; Qwen działa manualnie, GLM nie jest uruchomiony. |
+| 8 llama services | **PARTIAL** | Qwen działa manualnie. GLM załadował się na 8080, ale przy równoległym Qwen kernel OOM killer zatrzymał usługę; jednostki mają teraz wzajemny `Conflicts=` i pozostają disabled. |
 | 9 interactive subagents | **PARTIAL/DONE CORE** | Pinned package, tmux, scoped agent models i live scout spawn/result działają. Nie testowano nested spawn ani wszystkich allowlistów. |
 | 10 observational memory | **PARTIAL** | Package jest pinned, OFF domyślnie, `/om` smoke działa; brak pełnego `.memory`/compaction/resume testu. |
 | 11 providers | **PARTIAL** | Local + OpenRouter są dostępne; OpenAI, Cursor i LightLLM nie są wdrożone. |
