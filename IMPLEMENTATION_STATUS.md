@@ -77,3 +77,19 @@ only `src/math.js`, and the final test run passes both tests.
 `openai-codex/gpt-5.3-codex-spark` remains in the user's configured scope but is
 excluded from automatic routing because Codex reports it unsupported for a
 ChatGPT account. The scope itself was not rewritten.
+
+
+## Verified delivery — 2026-09-25
+
+Changes committed in a workspace delivery clone because the original repository
+is read-only to this session. tmux changes preserved verbatim. Router: Polish
+classification, exact option parsing, three selection attempts, sanitized attempt
+metadata. Synchronization now copies the router and rechecks after apply.
+Eight mocked behavioral tests pass; they do not prove provider access or live
+tmux behavior. No global runtime deployment has occurred.
+
+The router is still provider-priority based, not capability-scored orchestration.
+Inference-time fallback, subagent delegation, quota adapters and memory remain
+open. Authentication configuration is not proof of model entitlement.
+Component manifest now hashes Git-tracked resources only, excluding installed
+dependencies and transient files.
