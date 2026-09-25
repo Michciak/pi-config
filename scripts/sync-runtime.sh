@@ -13,11 +13,24 @@ compare() {
 rc=0
 for source in "$REPO_DIR"/agents/*.md; do compare "$source" "$PI_AGENT_DIR/agents/$(basename "$source")" || rc=1; done
 compare "$REPO_DIR/tmux/tmux.conf" "$HOME/.tmux.conf" || rc=1
+for source in "$REPO_DIR"/skills/*; do
+  target="$PI_AGENT_DIR/skills/$(basename "$source")"
+  if [[ ! -d "$target" ]]; then print "MISSING $target"; rc=1
+  elif diff -qr "$source" "$target" >/dev/null; then print "OK      $target"
+  else print "DIFF    $target"; rc=1
+  fi
+done
 if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
   stamp="$(date +%Y%m%d-%H%M%S)"; backup="$PI_AGENT_DIR/backups/pi-config-sync-$stamp"; mkdir -p "$backup/agents"
   for source in "$REPO_DIR"/agents/*.md; do target="$PI_AGENT_DIR/agents/$(basename "$source")"; [[ -e "$target" ]] && cp "$target" "$backup/agents/"; cp "$source" "$target"; done
   [[ -e "$HOME/.tmux.conf" ]] && cp "$HOME/.tmux.conf" "$backup/tmux.conf"
   cp "$REPO_DIR/tmux/tmux.conf" "$HOME/.tmux.conf"; chmod 600 "$HOME/.tmux.conf"
+  mkdir -p "$backup/skills" "$PI_AGENT_DIR/skills"
+  for source in "$REPO_DIR"/skills/*; do
+    name=$(basename "$source"); target="$PI_AGENT_DIR/skills/$name"
+    [[ -e "$target" ]] && cp -R "$target" "$backup/skills/"
+    mkdir -p "$target"; cp -R "$source"/. "$target"/
+  done
   print "Applied. Backup: $backup"
 elif [[ "$MODE" == "apply" ]]; then print "Already synchronized; no files changed."; fi
 exit "$rc"
