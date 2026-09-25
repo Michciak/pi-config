@@ -1,0 +1,9 @@
+# Runtime and secrets
+.auth.json
+**/auth.json
+.env
+.env.*
+node_modules/
+.venv/
+*.log
+.DS_Store
