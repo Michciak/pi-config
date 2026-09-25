@@ -2,7 +2,6 @@
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PI_AGENT_DIR="${PI_AGENT_DIR:-$HOME/.pi/agent}"
-TMUX_CONFIG_FILE="${TMUX_CONFIG_FILE:-$HOME/.tmux.conf}"
 MODE="check"
 if [[ "${1:-}" == "--apply" ]]; then MODE="apply"; elif [[ "${1:-}" != "" && "${1:-}" != "--check" ]]; then print -u2 "Usage: $0 [--check|--apply]"; exit 2; fi
 compare() {
@@ -13,7 +12,6 @@ compare() {
 }
 rc=0
 for source in "$REPO_DIR"/agents/*.md; do compare "$source" "$PI_AGENT_DIR/agents/$(basename "$source")" || rc=1; done
-compare "$REPO_DIR/tmux/tmux.conf" "$TMUX_CONFIG_FILE" || rc=1
 compare "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts" || rc=1
 compare "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts" || rc=1
 compare "$REPO_DIR/extensions/file-links.ts" "$PI_AGENT_DIR/extensions/file-links.ts" || rc=1
@@ -30,8 +28,6 @@ done
 if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
   stamp="$(date +%Y%m%d-%H%M%S)"; backup="$PI_AGENT_DIR/backups/pi-config-sync-$stamp"; mkdir -p "$backup/agents" "$PI_AGENT_DIR/agents"
   for source in "$REPO_DIR"/agents/*.md; do target="$PI_AGENT_DIR/agents/$(basename "$source")"; [[ -e "$target" ]] && cp "$target" "$backup/agents/"; cp "$source" "$target"; done
-  [[ -e "$TMUX_CONFIG_FILE" ]] && cp "$TMUX_CONFIG_FILE" "$backup/tmux.conf"
-  cp "$REPO_DIR/tmux/tmux.conf" "$TMUX_CONFIG_FILE"; chmod 600 "$TMUX_CONFIG_FILE"
   mkdir -p "$PI_AGENT_DIR/extensions"
   [[ -e "$PI_AGENT_DIR/extensions/cursor-subagents.ts" ]] && cp "$PI_AGENT_DIR/extensions/cursor-subagents.ts" "$backup/cursor-subagents.ts"
   cp "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts"

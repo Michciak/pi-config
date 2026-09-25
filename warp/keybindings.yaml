@@ -1,5 +1,0 @@
-# Native Warp clipboard actions; no escape sequences or tmux paste helpers.
-"terminal:copy": cmd-shift-C
-"terminal:paste": cmd-shift-V
-# Move Copy Command away from the requested clipboard shortcut.
-"terminal:copy_commands": cmd-alt-c

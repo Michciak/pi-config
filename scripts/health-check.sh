@@ -7,7 +7,6 @@ ok() { print "OK   $1"; }
 bad() { print "FAIL $1"; fail=1; }
 if command -v pi >/dev/null 2>&1; then ok "pi available ($(pi --version 2>/dev/null | head -1))"; else bad "pi executable"; fi
 if command -v tmux >/dev/null 2>&1; then ok "tmux available ($(tmux -V))"; else bad "tmux executable"; fi
-if [[ -f "$HOME/.tmux.conf" ]]; then ok "tmux config"; else bad "~/.tmux.conf"; fi
 python3 - "$PI_AGENT_DIR" "$REPO_DIR" <<'PY'
 import json, stat, sys
 from pathlib import Path

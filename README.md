@@ -1,6 +1,6 @@
 # Local Pi configuration
 
-Versioned local configuration for Pi on macOS with Warp, tmux, OpenAI/Codex,
+Versioned local configuration for Pi on macOS with OpenAI/Codex,
 OpenRouter, Cursor CLI, and the existing Pi model scope.
 
 ## Current policy
@@ -15,16 +15,14 @@ OpenRouter, Cursor CLI, and the existing Pi model scope.
 ## Run
 
 ```sh
-tmux new -A -s pi
 pi
 ```
 
 In an existing Pi session, use `/reload` after changing extensions.
 
-The confirmed working baseline now has three optional UI additions: tmux mouse
-support, native clipboard copying, and file hyperlinks opened by Warp in Rider.
-No keyboard/protocol overrides are added. See [minimal UI setup](docs/minimal-ui.md).
-`python3 scripts/reset-tmux.py` remains available to restore standard tmux defaults.
+Warp and tmux customization has been removed. Run Pi directly in your chosen
+terminal. Interactive subagents may still use tmux; the binary remains installed
+with standard settings. Runtime sync no longer installs terminal configuration.
 
 ## Agents
 

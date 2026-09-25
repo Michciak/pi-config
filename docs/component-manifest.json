@@ -314,11 +314,6 @@
       "path": "skills/youtube-transcript/fetch_transcript.py",
       "sha256": "1105618b1d2434766eb4fc8507abb4dfc626782649dc784930ce5f357e577fc9",
       "bytes": 3827
-    },
-    {
-      "path": "tmux/tmux.conf",
-      "sha256": "15ff5641bea214d49999daabb27c168a83a602e8da87d258704a6c1a827148fc",
-      "bytes": 407
     }
   ],
   "runtimeSync": "Tracked source files only. These revisions are staged in a delivery repository; global runtime has not been updated."
