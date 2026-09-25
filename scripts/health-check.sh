@@ -37,3 +37,8 @@ for p in (repo/'package.json', repo/'docs/component-manifest.json', repo/'script
 print('LOCAL_LLM=deferred')
 raise SystemExit(1 if failed else 0)
 PY
+
+if ! python3 "$REPO_DIR/scripts/validate-capability-registry.py"; then
+  fail=1
+fi
+exit "$fail"
