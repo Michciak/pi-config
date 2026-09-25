@@ -65,3 +65,10 @@ Run the full smoke test from Warp, where Pi can acquire its normal runtime
 locks and model catalog. Then decide whether to build the failure/recovery
 fixture (plan stage 7) or add one MCP integration. No router or local-model
 work is needed for the current direction.
+
+## Failure/recovery fixture
+
+`tests/failure-recovery-fixture` contains two intentional production defects
+and correct tests. The baseline is verified to fail two tests. Use
+`scripts/run-failure-recovery-test.sh` from Warp to run the current Pi model
+against the isolated fixture; tests must remain unchanged.
