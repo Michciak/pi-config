@@ -1,9 +1,10 @@
 # Minimal Pi + tmux + Warp additions
 
 Start from the confirmed working `pi-baseline` server. The tmux configuration
-contains only three options: mouse support, `pbcopy` as copy-command, and OSC 8
-hyperlink support for Warp's xterm-compatible terminal. All keyboard bindings and
-extended-key settings remain at the working defaults.
+preserves standard mouse scrolling, adds explicit macOS clipboard shortcuts and
+OSC 8 hyperlinks. Pi requests extended keys with `extended-keys on` and `csi-u`;
+restart Pi after installing these options so keyboard negotiation happens again.
+Do not restart or kill the tmux server. Ctrl+d and Ctrl+v are not rebound.
 
 `python3 scripts/install-minimal-ui.py` backs up and installs the tmux config,
 the Pi display extension, and the three-line subagent loader addition. It reloads
@@ -35,10 +36,19 @@ preferences file or change system-wide file associations.
 | Return to live Pi | q while in copy-mode (counter visible in upper right) |
 | Copy through tmux | Drag to select, release to copy to macOS clipboard |
 | Copy through Warp | Hold Shift while selecting, then Cmd+C |
+| Copy with keyboard | Ctrl+b, then [; arrows to start; v; arrows to select; y copies to macOS |
 | Paste | q if in copy-mode, then Cmd+V |
+| Paste without Warp clipboard shortcut | Ctrl+b, then v; reads macOS text clipboard and exits copy-mode automatically |
 | Paste image | Ctrl+V handled by Pi, unchanged |
 | Prompt history | Up/Down at the live Pi prompt, unchanged |
 | Open file | Cmd+click its hyperlink; hold Shift as well if tmux captures the click |
+
+The explicit paste helper streams clipboard bytes into a unique tmux buffer;
+clipboard text is never interpolated into shell code. It preserves trailing
+newlines and requests bracketed paste, then removes its temporary buffer. It
+does not read the clipboard during installation. Cmd+C/Cmd+V are Warp shortcuts;
+these tmux changes do not prove that those native shortcuts work in a given Warp
+version. Use Shift+drag for native Warp selection, or the explicit tmux shortcuts.
 
 ## File links
 

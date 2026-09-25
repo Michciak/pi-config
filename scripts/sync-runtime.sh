@@ -14,6 +14,7 @@ compare() {
 rc=0
 for source in "$REPO_DIR"/agents/*.md; do compare "$source" "$PI_AGENT_DIR/agents/$(basename "$source")" || rc=1; done
 compare "$REPO_DIR/tmux/tmux.conf" "$TMUX_CONFIG_FILE" || rc=1
+compare "$REPO_DIR/scripts/tmux-paste.sh" "$PI_AGENT_DIR/bin/tmux-paste.sh" || rc=1
 compare "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts" || rc=1
 compare "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts" || rc=1
 compare "$REPO_DIR/extensions/file-links.ts" "$PI_AGENT_DIR/extensions/file-links.ts" || rc=1
@@ -32,6 +33,9 @@ if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
   for source in "$REPO_DIR"/agents/*.md; do target="$PI_AGENT_DIR/agents/$(basename "$source")"; [[ -e "$target" ]] && cp "$target" "$backup/agents/"; cp "$source" "$target"; done
   [[ -e "$TMUX_CONFIG_FILE" ]] && cp "$TMUX_CONFIG_FILE" "$backup/tmux.conf"
   cp "$REPO_DIR/tmux/tmux.conf" "$TMUX_CONFIG_FILE"; chmod 600 "$TMUX_CONFIG_FILE"
+  mkdir -p "$PI_AGENT_DIR/bin"
+  [[ -e "$PI_AGENT_DIR/bin/tmux-paste.sh" ]] && cp "$PI_AGENT_DIR/bin/tmux-paste.sh" "$backup/tmux-paste.sh"
+  cp "$REPO_DIR/scripts/tmux-paste.sh" "$PI_AGENT_DIR/bin/tmux-paste.sh"
   mkdir -p "$PI_AGENT_DIR/extensions"
   [[ -e "$PI_AGENT_DIR/extensions/cursor-subagents.ts" ]] && cp "$PI_AGENT_DIR/extensions/cursor-subagents.ts" "$backup/cursor-subagents.ts"
   cp "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts"
