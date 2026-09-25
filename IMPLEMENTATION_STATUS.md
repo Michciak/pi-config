@@ -58,3 +58,10 @@ synchronization; it does not contain credentials or session state.
 configuration without reading secrets. `--apply` backs up only the files it
 will replace and then synchronizes them. Pi settings, model scope, auth, and
 session state are intentionally outside its write set.
+
+## Health check
+
+`scripts/health-check.sh` performs a read-only local check of Pi, tmux, the
+current orchestrator, model-scope size, auth file permissions (without reading
+contents), merged agents, and repository manifests. Local LLM checks are
+explicitly reported as deferred.
