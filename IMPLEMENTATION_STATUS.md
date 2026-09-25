@@ -39,3 +39,9 @@ acquire Pi's runtime locks under `~/.pi/agent`; it reported `EPERM` while
 opening settings/auth locks. No runtime or secret files were changed. The
 remaining smoke test should be run from the user's Warp terminal before adding
 this local package to global settings.
+
+## tmux/Warp scrollback
+
+Added `tmux/tmux.conf` and installed it as `~/.tmux.conf` with mouse support,
+20,000 lines of history, and vi copy mode. Existing tmux sessions need
+`tmux source-file ~/.tmux.conf` or a restart to load it.
