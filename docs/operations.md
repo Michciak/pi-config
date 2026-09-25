@@ -50,3 +50,6 @@ current Pi session. It does not create a tmux pane. Use `/subagent <agent>
 Use `/route --explain <task>` to inspect the top eligible candidates without
 changing the active model or dispatching the task. Decisions are recorded in
 the Pi session as `router-decision` metadata without storing prompt text.
+
+`/route --explain <task>` shows the ranking and then executes the task.
+Use `/route --explain-only <task>` when you only want diagnostics.

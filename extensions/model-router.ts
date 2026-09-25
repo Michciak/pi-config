@@ -40,8 +40,9 @@ function eligible(model: any, ctx: any): boolean {
 
 export default function modelRouter(pi: ExtensionAPI) {
   const route = async (args: string, ctx: any) => {
-    const explain = args.trim().startsWith("--explain");
-    const task = args.trim().replace(/^--explain\s*/, "");
+    const explainOnly = args.trim().startsWith("--explain-only");
+    const explain = explainOnly || args.trim().startsWith("--explain");
+    const task = args.trim().replace(/^--explain-only\s*/, "").replace(/^--explain\s*/, "");
     if (!task) {
       ctx.ui.notify("Usage: /route <task description>", "warning");
       return;
@@ -58,7 +59,7 @@ export default function modelRouter(pi: ExtensionAPI) {
       const preview = eligibleRanked.slice(0, 5).map(ref).join(", ") || "(none)";
       ctx.ui.notify(`Router ${role}: ${preview}`, "info");
       pi.appendEntry("router-decision", { role, candidates: eligibleRanked.slice(0, 10).map(ref), explained: true });
-      return;
+      if (explainOnly) return;
     }
     for (const model of eligibleRanked) {
       const selected = await pi.setModel(model);
