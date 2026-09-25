@@ -34,3 +34,11 @@ are outside its write set.
 The selected Pi model remains the orchestrator. Local LLM servers are deferred.
 The existing provider configuration and model scope remain authoritative until
 a separate, reviewed scope change is committed.
+
+## Model routing
+
+Use `/route <task description>` to select a model for a task. The first version
+uses conservative task categories (`coding`, `research`, `reasoning`, `fast`,
+`general`) and ranks only models already present in the active Pi scope. It is
+explicit by design: ordinary prompts and manual `/model` selections are not
+overridden automatically.

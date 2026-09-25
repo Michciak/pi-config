@@ -14,6 +14,7 @@ rc=0
 for source in "$REPO_DIR"/agents/*.md; do compare "$source" "$PI_AGENT_DIR/agents/$(basename "$source")" || rc=1; done
 compare "$REPO_DIR/tmux/tmux.conf" "$HOME/.tmux.conf" || rc=1
 compare "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts" || rc=1
+compare "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts" || rc=1
 for source in "$REPO_DIR"/skills/*; do
   target="$PI_AGENT_DIR/skills/$(basename "$source")"
   if [[ ! -d "$target" ]]; then print "MISSING $target"; rc=1

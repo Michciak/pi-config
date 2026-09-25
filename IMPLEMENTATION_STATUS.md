@@ -41,7 +41,7 @@ Repository: `/Users/michalkozinski/projects/pi-config`
 | 12. MCP | Not started | No MCP server has been added. |
 | 13. Capability registry | Scaffold complete | Registry covers all active scope entries with conservative unverified fields and validation. |
 | 14. Quota/cost adapters | Not started | No provider quota API was introduced. |
-| 15. Model router | Intentionally not started | Current selected model remains orchestrator; scope is not overridden. |
+| 15. Model router | Initial explicit version complete | `/route` classifies a task heuristically and selects only an authenticated model from `ctx.scopedModels`; automatic per-prompt routing is not enabled. |
 | 16. Repository structure | Mostly complete | Package, agents, extensions, skills, scripts, docs, and settings are versioned. |
 | 17. Health check | Complete | Read-only health check covers runtime, agents, skills, scope, registry, and auth permissions. |
 | 18. GLM-5.3 compatibility | Deferred | Local model work is out of current scope. |
