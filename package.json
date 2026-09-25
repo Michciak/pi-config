@@ -1,0 +1,10 @@
+{
+  "name": "pi-config-local",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Versioned local Pi configuration for macOS",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extensions/*.ts", "./extensions/*/index.ts"]
+  }
+}
