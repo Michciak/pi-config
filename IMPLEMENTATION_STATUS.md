@@ -68,7 +68,7 @@ Baseline audit complete; staged implementation is in progress.
 - `web-fetch` successfully fetched `https://example.com`; `web-search` correctly reports missing credentials.
 - Browser dependency smoke test passed: Chromium navigated to Example Domain, read DOM title, and wrote `/tmp/pi-config-example.png`.
 - Failure/recovery fixture at `~/projects/pi-qwen-recovery-fixture` demonstrates FAIL → production-only repair → PASS; final suite is 3/3 and tests were not modified during the repair.
-- GLM fallback remains unavailable until the GLM server is started on port 8080.
+- GLM fallback was started for validation but the kernel OOM killer stopped it while Qwen was also loaded; service templates now declare mutual conflicts and only one large local model should run at a time.
 - Google web search remains unavailable until credentials are supplied by the user.
 - GLM fallback on 8080 is still stopped; this is expected because only Qwen was requested.
 - Live tmux spawn test passed in a disposable `pi-config-subagent-test` session: scout ran on local Qwen, read `README.md`, and returned `# Pi Configuration`; the test session was removed afterward.

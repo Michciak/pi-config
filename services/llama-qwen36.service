@@ -1,6 +1,7 @@
 [Unit]
 Description=llama.cpp Qwen3.6 local endpoint for Pi
 After=network.target
+Conflicts=llama-glm47.service
 
 [Service]
 Type=simple

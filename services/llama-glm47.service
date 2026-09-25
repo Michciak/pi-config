@@ -1,6 +1,7 @@
 [Unit]
 Description=llama.cpp GLM-4.7 local fallback endpoint for Pi
 After=network.target
+Conflicts=llama-qwen36.service
 
 [Service]
 Type=simple
