@@ -16,11 +16,11 @@ const PROVIDER_PRIORITY: Record<Role, string[]> = {
 };
 
 function classify(task: string): Role {
-  const text = task.toLowerCase();
-  if (/\b(search|research|sources?|web|compare|look up|investigate)\b/.test(text)) return "research";
-  if (/\b(debug|fix|implement|code|refactor|test|bug|typescript|javascript|python)\b/.test(text)) return "coding";
-  if (/\b(plan|architecture|design|trade-?off|reason|analy[sz]e|review)\b/.test(text)) return "reasoning";
-  if (/\b(quick|brief|short|summarize|simple)\b/.test(text)) return "fast";
+  const text = task.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l");
+  if (/\b(szukaj|wyszukaj|porownaj|zrodla|search|research|sources?|web|compare|look up|investigate)\b/.test(text)) return "research";
+  if (/\b(napraw|blad|bledy|zaimplementuj|refaktoryzuj|testy|debug|fix|implement|code|refactor|test|bug|typescript|javascript|python)\b/.test(text)) return "coding";
+  if (/\b(zaplanuj|zaprojektuj|architektura|architekture|przeanalizuj|plan|architecture|design|trade-?off|reason|analy[sz]e|review)\b/.test(text)) return "reasoning";
+  if (/\b(krotko|szybko|podsumuj|quick|brief|short|summarize|simple)\b/.test(text)) return "fast";
   return "general";
 }
 
@@ -40,11 +40,15 @@ function eligible(model: any, ctx: any): boolean {
 
 export default function modelRouter(pi: ExtensionAPI) {
   const route = async (args: string, ctx: any) => {
-    const explainOnly = args.trim().startsWith("--explain-only");
-    const explain = explainOnly || args.trim().startsWith("--explain");
-    const task = args.trim().replace(/^--explain-only\s*/, "").replace(/^--explain\s*/, "");
+    const explainOnly = /^--explain-only(?:\s|$)/.test(args.trim());
+    const explain = explainOnly || /^--explain(?:\s|$)/.test(args.trim());
+    const task = args.trim().replace(/^--explain(?:-only)?(?:\s+|$)/, "");
     if (!task) {
       ctx.ui.notify("Usage: /route <task description>", "warning");
+      return;
+    }
+    if (task.startsWith("--")) {
+      ctx.ui.notify("Unknown router option. Use --explain or --explain-only.", "warning");
       return;
     }
     const role = classify(task);
@@ -61,17 +65,27 @@ export default function modelRouter(pi: ExtensionAPI) {
       pi.appendEntry("router-decision", { role, candidates: eligibleRanked.slice(0, 10).map(ref), explained: true });
       if (explainOnly) return;
     }
-    for (const model of eligibleRanked) {
-      const selected = await pi.setModel(model);
+    // Limit selection attempts; never replay a dispatched task on another model.
+    const attempts: { model: string; outcome: string }[] = [];
+    for (const model of eligibleRanked.slice(0, 3)) {
+      let selected = false;
+      try {
+        selected = await pi.setModel(model);
+        attempts.push({ model: ref(model), outcome: selected ? "selected" : "unavailable" });
+      } catch {
+        // Provider errors may contain sensitive data: record only a category.
+        attempts.push({ model: ref(model), outcome: "selection-error" });
+        continue;
+      }
       if (selected) {
         ctx.ui.notify(`Router: ${role} → ${ref(model)}`, "info");
-        pi.appendEntry("router-decision", { role, selected: ref(model), candidates: eligibleRanked.slice(0, 10).map(ref) });
+        pi.appendEntry("router-decision", { role, attempts, selected: ref(model), candidates: eligibleRanked.slice(0, 10).map(ref) });
         await pi.sendUserMessage(task);
         return;
       }
     }
-    pi.appendEntry("router-decision", { role, selected: null, candidates: eligibleRanked.slice(0, 10).map(ref) });
-    ctx.ui.notify(`Router found no authenticated model for role ${role}; current model kept.`, "warning");
+    pi.appendEntry("router-decision", { role, attempts, selected: null, candidates: eligibleRanked.slice(0, 10).map(ref) });
+    ctx.ui.notify(`Router could not select a model for ${role} within 3 attempts; task was not dispatched.`, "warning");
   };
 
   pi.registerCommand("route", {

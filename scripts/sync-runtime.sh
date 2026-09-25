@@ -30,6 +30,8 @@ if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
   mkdir -p "$PI_AGENT_DIR/extensions"
   [[ -e "$PI_AGENT_DIR/extensions/cursor-subagents.ts" ]] && cp "$PI_AGENT_DIR/extensions/cursor-subagents.ts" "$backup/cursor-subagents.ts"
   cp "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts"
+  [[ -e "$PI_AGENT_DIR/extensions/model-router.ts" ]] && cp "$PI_AGENT_DIR/extensions/model-router.ts" "$backup/model-router.ts"
+  cp "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts"
   mkdir -p "$backup/skills" "$PI_AGENT_DIR/skills"
   for source in "$REPO_DIR"/skills/*; do
     name=$(basename "$source"); target="$PI_AGENT_DIR/skills/$name"
@@ -37,5 +39,6 @@ if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
     mkdir -p "$target"; cp -R "$source"/. "$target"/
   done
   print "Applied. Backup: $backup"
+  exec "$REPO_DIR/scripts/sync-runtime.sh" --check
 elif [[ "$MODE" == "apply" ]]; then print "Already synchronized; no files changed."; fi
 exit "$rc"
