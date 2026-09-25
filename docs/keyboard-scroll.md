@@ -3,6 +3,10 @@
 Apply delivery `--keyboard-scroll` from a shell inside the target tmux session
 (Ctrl+b then c). No Warp preferences or mouse/clipboard/protocol options change.
 The installer appends a managed block to ~/.tmux.conf and backs up the old file.
+The bindings persist across restarts: new tmux servers read ~/.tmux.conf by
+default. Do not start tmux with `-f /dev/null`, which deliberately bypasses it.
+Already-running other tmux servers require `tmux source-file ~/.tmux.conf`
+from a shell inside the desired server. Reinstallation does not duplicate the block.
 
 - Fn+Up (PageUp): enter history and scroll up a page.
 - Fn+Down (PageDown), while in history: scroll down, exit at the bottom.
