@@ -8,8 +8,8 @@ default. Do not start tmux with `-f /dev/null`, which deliberately bypasses it.
 Already-running other tmux servers require `tmux source-file ~/.tmux.conf`
 from a shell inside the desired server. Reinstallation does not duplicate the block.
 
-- Fn+Up (PageUp): enter history and scroll up a page.
-- Fn+Down (PageDown), while in history: scroll down, exit at the bottom.
+- Fn+Up (PageUp): enter history and scroll up half a page; subsequent presses also move half a page.
+- Fn+Down (PageDown), while in history: scroll down half a page, exit at the bottom.
 - Escape or q, while in history: immediately return to the live pane.
 
 Exiting copy-mode discards the history cursor and returns keyboard input to the
@@ -24,6 +24,6 @@ Pi tool components. Expanding a specific tool under that cursor is not implement
 it requires application-level navigation and per-component expansion in Pi.
 Return with Escape before using Pi's existing global Ctrl+O.
 
-Verified against the installed tmux 3.7c manual (copy-mode -e/-u and
-page-down-and-cancel). Installer tested with a temporary home and simulated tmux;
+Verified against the installed tmux 3.7c manual (copy-mode -e,
+halfpage-up and halfpage-down-and-cancel). Installer tested with a temporary home and simulated tmux;
 live input behavior awaits application on the user's terminal.
