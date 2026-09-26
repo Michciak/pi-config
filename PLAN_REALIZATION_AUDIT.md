@@ -10,7 +10,7 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 | llama.cpp | 0.4.1-dev, build 10964 | `llama-server --version` |
 | tmux | 3.7c | `tmux -V` |
 | default | `local-qwen36` + Qwen3.6 | `~/.pi/agent/settings.json` |
-| scope | Qwen, GLM, `openrouter/auto` | `enabledModels` + `pi --list-models` |
+| scope | Qwen, GLM, `openrouter/auto`, github-copilot, openai-codex, cursor | `enabledModels` + `pi --list-models` |
 | models symlink | poprawny | `readlink -f ~/.pi/agent/models.json` |
 | Qwen endpoint | działa; deep inference PASS | `scripts/health-check.sh --deep` |
 | GLM endpoint | zatrzymany | port 8080 HTTP 000 |
@@ -31,14 +31,22 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 | 8 llama services | **PARTIAL** | Qwen działa manualnie. GLM załadował się na 8080, ale przy równoległym Qwen kernel OOM killer zatrzymał usługę; jednostki mają teraz wzajemny `Conflicts=` i pozostają disabled. |
 | 9 interactive subagents | **PARTIAL/DONE CORE** | Pinned package, tmux, scoped agent models i live scout spawn/result działają. Nie testowano nested spawn ani wszystkich allowlistów. |
 | 10 observational memory | **PARTIAL/DONE CORE** | Package pinned i OFF domyślnie. Realny test utworzył `INDEX.md`, `JOURNEY.md`, topic file oraz run artifacts; wznowienie tej samej sesji `/om:status` działało. Pełna compaction pozostaje osobnym testem. |
-| 11 providers | **PARTIAL** | Local + OpenRouter są dostępne; OpenAI Codex przez Pi `/login` przeszedł inference smoke test, ale Cursor/LightLLM nie są skonfigurowane. |
+| 11 providers | **DONE** | Obecny zestaw (local-glm, local-qwen36, openrouter/auto, github-copilot, openai-codex, cursor) uznany za wystarczający. Nie planuje się dalszych providerów. |
 | 12 MCP | **DONE MINIMAL** | Dodano stdio MCP server i Pi bridge; `config_status` oraz `provider_quota_status` zostały odkryte i wywołane z Pi. |
 | 13 capability registry | **DONE STATIC** | `settings/model-capabilities.json` istnieje i jest używany przez router. |
-| 14 quota/cost adapters | **PARTIAL** | Dodano adapter OpenRouter credits oraz status OpenAI Codex OAuth (`quotaKnown=false` bez publicznego endpointu); cost telemetry pozostaje niepełne. |
+| 14 quota/cost adapters | **PARTIAL** | Dodano adapter OpenRouter credits oraz status OpenAI Codex OAuth (`quotaKnown=false` bez publicznego endpointu); cost telemetry pozostaje niepełne. | | — **NOWY PUNKT** | Dodać `left information getter` dla każdego aktywnego providera (cursor, github-copilot, openai-codex, openrouter). Local pozostaje `hardware-bound`. Plan: rozszerzyć `scripts/quota-check.mjs`. |
 | 15 model router | **PARTIAL** | Filtering/scoring, manual override, fallback limit i OpenRouter simple-task rule są przetestowane; brak pełnej integracji ze wszystkimi provider adapters. |
 | 16 production structure | **PARTIAL** | Główna struktura istnieje; część upstream nadal jest lokalnym importem bez pełnego refactoru/normalizacji. |
 | 17 health check | **PARTIAL** | Basic/deep health działają; nie sprawdzają jeszcze wszystkich wymaganych extension/subagent/memory states. |
 | 18 GLM-5.3 | **NOT DONE** | Model zachowany, ale nie wykonano nowego compatibility testu. |
+
+## Nowe punkty planu
+
+| # | Temat | Opis |
+|---|---|---|
+| — **NOWY** | Quota left information getter | Dodać `left information getter` dla każdego aktywnego providera (cursor, github-copilot, openai-codex, openrouter). Local pozostaje `hardware-bound`. Plan: rozszerzyć `scripts/quota-check.mjs`. |
+| — **NOWY** | Hyperland window opener | Przerobić wszystkie extension i konfigurację, żeby zamiast z tmux-pane korzystała z otwierania nowego okna w natywnym Hyperland. Obecnie `createSurface()` używa `tmux split-window`. Należy zastąpić `hyprctl dispatch` lub odpowiednim API Hyprland. Hyprland 0.56.2 jest dostępny, `hyprctl` działa, środowisko Wayland. |
+| — **NOWY** | Naprawić hiperlinki w Pi | Hiperlinki OSC 8 nie działają w obecnej konfiguracji. Pi obsługuje `terminal.hyperlinks: boolean | "auto"` z domyślną wartością `"auto"`. Należy sprawdzić detekcję, czy nie jest zablokowana przez multiplexer/proxy terminala, i wymusić `terminal.hyperlinks: true` w `~/.pi/agent/settings.json` jeśli automatyczny wykrywanie nie działa. |
 
 ## Nowe wdrożenia po audycie
 
@@ -51,5 +59,5 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 
 Plan **nie jest w całości zrealizowany**. Fundament lokalny, scope, Qwen,
 subagenci, podstawowy router i diagnostyka działają. Do pełnej realizacji
-pozostają przede wszystkim: MCP, OpenAI/Cursor/LightLLM, pełne testy memory i
-skills, GLM fallback, quota/cost adapters oraz GLM-5.3 compatibility test.
+pozostają: quota left getter (nowy), Hyperland window opener (nowy), hiperlinki Pi (nowy), pełne testy memory i
+skills, GLM fallback, cost telemetry oraz GLM-5.3 compatibility test.
