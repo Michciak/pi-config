@@ -47,4 +47,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }

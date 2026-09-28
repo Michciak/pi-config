@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessaging
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
@@ -25,6 +27,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private lateinit var host: EditText
     private lateinit var code: EditText
+    private val qrScanner = registerForActivityResult(ScanContract()) { result ->
+        val contents = result.contents
+        if (contents == null) {
+            if (::status.isInitialized) status.text = "Skanowanie anulowane."
+            return@registerForActivityResult
+        }
+        val uri = runCatching { Uri.parse(contents) }.getOrNull()
+        if (uri == null || !handlePairUri(uri)) status.text = "Kod QR nie jest kodem parowania Pi Remote."
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +87,17 @@ class MainActivity : AppCompatActivity() {
             addView(host)
             addView(code)
             addView(Button(context).apply {
+                text = "Skanuj kod QR"
+                setOnClickListener {
+                    qrScanner.launch(ScanOptions().apply {
+                        setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                        setPrompt("Zeskanuj kod z panelu Pi")
+                        setBeepEnabled(false)
+                        setOrientationLocked(false)
+                    })
+                }
+            }, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            addView(Button(context).apply {
                 text = "Sparuj urządzenie"
                 setOnClickListener { pair(host.text.toString(), code.text.toString()) }
             }, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -105,20 +127,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent): Boolean {
         val uri = intent.data
-        if (uri?.scheme == "piremote" && uri.host == "pair") {
-            val pairHost = uri.getQueryParameter("host") ?: return false
-            val port = uri.getQueryParameter("port") ?: "3784"
-            val pairCode = uri.getQueryParameter("code") ?: return false
-            host.setText("$pairHost:$port")
-            code.setText(pairCode)
-            pair("$pairHost:$port", pairCode)
-            return true
-        }
+        if (uri != null && handlePairUri(uri)) return true
         if (intent.getBooleanExtra(Notifications.EXTRA_OPEN_WEB, false)) {
             openWebPanel(intent.getStringExtra(Notifications.EXTRA_INTERACTION_ID))
             return true
         }
         return false
+    }
+
+    private fun handlePairUri(uri: Uri): Boolean {
+        if (uri.scheme != "piremote" || uri.host != "pair") return false
+        val pairHost = uri.getQueryParameter("host") ?: return false
+        val port = uri.getQueryParameter("port") ?: "3784"
+        val pairCode = uri.getQueryParameter("code") ?: return false
+        host.setText("$pairHost:$port")
+        code.setText(pairCode)
+        pair("$pairHost:$port", pairCode)
+        return true
     }
 
     private fun pair(address: String, pairCode: String) {
