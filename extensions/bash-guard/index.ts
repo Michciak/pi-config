@@ -313,6 +313,14 @@ async function promptRunOrAbort(ctx: any, command: string, risk: Risk): Promise<
 	const header = `Command flagged as ${risk.severity.toUpperCase()} risk:`;
 	const body = `${header}\n\n${reasonsText}\n\nCommand:\n${command}`;
 
+	// ctx.ui.custom() is intentionally unavailable in RPC mode. confirm() is
+	// transported by Pi as extension_ui_request and resolved by Pi Control's
+	// approval broker (web, Android notification, or Galaxy Watch action).
+	if (ctx.mode === "rpc") {
+		const confirmed = await ctx.ui.confirm("Potentially destructive bash command", body);
+		return confirmed ? "run" : "abort";
+	}
+
 	const items: SelectItem[] = [
 		{ value: "run", label: "Run", description: "Execute the command" },
 		{ value: "abort", label: "Abort", description: "Block this command" },
