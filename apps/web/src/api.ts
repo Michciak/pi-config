@@ -4,6 +4,13 @@ import type { PromptSnippet } from "@pi-local/prompt-snippets";
 const SESSION_KEY = "pi-web-session";
 let token = sessionStorage.getItem(SESSION_KEY) ?? "";
 
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function exchangeHashToken(): Promise<void> {
   const match = location.hash.match(/(?:^#|&)token=([^&]+)/);
   if (!match) return;
@@ -24,7 +31,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (token) headers.set("authorization", `Bearer ${token}`);
   const response = await fetch(`/api/v1${path}`, { ...init, headers });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error ?? `HTTP ${response.status}`);
+  if (!response.ok) throw new ApiError(data.error ?? `HTTP ${response.status}`, response.status);
   return data as T;
 }
 

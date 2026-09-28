@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type { Approval, PiEvent, ServerStatus, UserQuestion } from "@pi-local/protocol";
 import type { PromptSnippet } from "@pi-local/prompt-snippets";
-import { connectEvents, controlApi, exchangeHashToken } from "./api.js";
+import { ApiError, connectEvents, controlApi, exchangeHashToken } from "./api.js";
 import { Markdown, messageText } from "./Markdown.js";
 import { QuestionCard } from "./QuestionCard.js";
 import { reduceLiveBlocks, toolEventText, type LiveBlocks } from "./stream.js";
@@ -55,21 +55,40 @@ export default function App() {
     setApprovals(nextApprovals);
   }
 
-  async function loadSession(id: string) {
+  async function readSession(id: string) {
+    const [nextMessages, nextState, nextModels, nextCommands] = await Promise.all([
+      controlApi.command<any[]>(id, "get_messages"),
+      controlApi.command(id, "get_state"),
+      controlApi.command<Model[]>(id, "get_available_models"),
+      controlApi.command<any[]>(id, "get_commands"),
+    ]);
+    setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands);
+  }
+
+  async function loadSession(id: string, resumeIfNeeded = true) {
     const switchingSession = selectedRef.current !== id;
     setSelectedId(id);
     if (switchingSession) {
       setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
     }
     try {
-      const [nextMessages, nextState, nextModels, nextCommands] = await Promise.all([
-        controlApi.command<any[]>(id, "get_messages"),
-        controlApi.command(id, "get_state"),
-        controlApi.command<Model[]>(id, "get_available_models"),
-        controlApi.command<any[]>(id, "get_commands"),
-      ]);
-      setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands);
-    } catch (cause) { setError(String(cause)); }
+      await readSession(id);
+      setError("");
+    } catch (cause) {
+      if (resumeIfNeeded && cause instanceof ApiError && cause.status === 409 && cause.message === "Session is not running") {
+        try {
+          await controlApi.resumeSession(id);
+          await refresh();
+          await readSession(id);
+          setError("");
+          return;
+        } catch (resumeCause) {
+          setError(String(resumeCause));
+          return;
+        }
+      }
+      setError(String(cause));
+    }
   }
 
   useEffect(() => {
@@ -100,7 +119,7 @@ export default function App() {
             const payload = event.payload as any;
             setQueue({ steering: payload.steering ?? [], followUp: payload.followUp ?? [] });
           }
-          if (event.sessionId === selectedRef.current && ["pi.agent_settled", "pi.message_end", "pi.tool_execution_end"].includes(event.type)) {
+          if (event.sessionId && event.sessionId === selectedRef.current && ["pi.agent_settled", "pi.message_end", "pi.tool_execution_end"].includes(event.type)) {
             if (event.type === "pi.message_end") { setLiveBlocks({}); setLiveUsage(undefined); }
             void loadSession(event.sessionId);
           }
@@ -117,7 +136,7 @@ export default function App() {
     return () => disconnect();
   }, []);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, events]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, liveBlocks]);
   useEffect(() => {
     if (interactionTarget) document.getElementById(`interaction-${interactionTarget}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [questions, approvals, interactionTarget]);
@@ -182,6 +201,16 @@ export default function App() {
     catch (cause) { setError(String(cause)); }
   }
 
+  async function changeModel(value: string) {
+    if (!selectedId || !value) return;
+    const [provider, ...modelId] = value.split("/");
+    try {
+      await controlApi.command(selectedId, "set_model", { provider, modelId: modelId.join("/") });
+      setSessionState(await controlApi.command(selectedId, "get_state"));
+      setError("");
+    } catch (cause) { setError(String(cause)); }
+  }
+
   async function chooseImages(files: FileList | null) {
     const selectedFiles = [...(files ?? [])].slice(0, 4);
     const loaded = await Promise.all(selectedFiles.map((file) => new Promise<{ type: "image"; data: string; mimeType: string }>((resolve, reject) => {
@@ -233,7 +262,7 @@ export default function App() {
         </div>
         <nav>{status?.sessions.map((session) => <button key={session.id}
           className={`session-row ${selectedId === session.id ? "active" : ""}`}
-          onClick={() => session.status === "interrupted" ? controlApi.resumeSession(session.id).then(() => loadSession(session.id)) : loadSession(session.id)}>
+          onClick={() => void loadSession(session.id)}>
           <span>{session.name}</span><small><i className={`session-dot ${session.status}`} />{session.status}</small>
         </button>)}</nav>
       </aside>
@@ -243,8 +272,8 @@ export default function App() {
           <div className="conversation-head">
             <div><h1>{selected.name}</h1><p>{selected.workspace}</p></div>
             <div className="model-controls">
-              <select value={sessionState?.model ? `${sessionState.model.provider}/${sessionState.model.id}` : ""}
-                onChange={(event) => { const [provider, ...id] = event.target.value.split("/"); void inspect("set_model", { provider, modelId: id.join("/") }); }}>
+              <select aria-label="Model" value={sessionState?.model ? `${sessionState.model.provider}/${sessionState.model.id}` : ""}
+                onChange={(event) => void changeModel(event.target.value)}>
                 <option value="">Model</option>{models.map((model) => <option key={`${model.provider}/${model.id}`}>{model.provider}/{model.id}</option>)}
               </select>
               <select value={sessionState?.thinkingLevel ?? "medium"} onChange={(event) => void inspect("set_thinking_level", { level: event.target.value })}>
@@ -270,7 +299,7 @@ export default function App() {
               </label>)}</div>
             </details>}
             <div className="button-grid">
-              {[["Statystyki","get_session_stats"],["Drzewo","get_tree"],["Forki","get_fork_messages"],["Komendy","get_commands"],["Eksport HTML","export_html"],["Kompaktuj","compact"]].map(([label, command]) =>
+              {([["Statystyki","get_session_stats"],["Drzewo","get_tree"],["Forki","get_fork_messages"],["Komendy","get_commands"],["Eksport HTML","export_html"],["Kompaktuj","compact"]] as const).map(([label, command]) =>
                 <button className="ghost" key={command} onClick={() => inspect(command)}>{label}</button>)}
               <button className="ghost" onClick={() => inspect("clone")}>Klonuj sesję</button>
               <button className="ghost" onClick={() => inspect("clear_queue")}>Wyczyść kolejkę</button>

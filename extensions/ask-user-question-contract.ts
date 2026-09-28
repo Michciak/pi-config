@@ -12,6 +12,11 @@ export type AskAnswer =
 export type AskUserQuestionStatus = "answered" | "cancelled" | "unavailable";
 export type AskUserQuestionMode = "text" | "single-select" | "multi-select";
 
+// Pi loads every top-level TypeScript file in the global extensions directory.
+// This module primarily exports the shared ask_user_question contract, but it
+// also needs to be a valid no-op extension when Pi discovers it directly.
+export default function askUserQuestionContractExtension(): void {}
+
 export interface AskUserQuestionResultDetails {
   status: AskUserQuestionStatus;
   question: string;

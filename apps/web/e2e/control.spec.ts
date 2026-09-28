@@ -81,6 +81,50 @@ test("submits text, single-select, multi-select and custom Other answers", async
   ]);
 });
 
+test("resumes a stopped RPC session and applies a model selection", async ({ page }) => {
+  const session = {
+    id: "session-1", name: "Recovered session", workspace: "/Dropbox/NETRIX/project",
+    status: "error", createdAt: now, updatedAt: now,
+  };
+  let running = false;
+  let model = { provider: "openai-codex", id: "gpt-5.5" };
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/v1/config") return route.fulfill({ json: { workspaceRoot: "/Dropbox/NETRIX" } });
+    if (path === "/api/v1/snippets" || path === "/api/v1/questions" || path === "/api/v1/approvals") return route.fulfill({ json: [] });
+    if (path === "/api/v1/status") return route.fulfill({ json: {
+      serverId: "test", control: "online", engine: "running", sessions: [{ ...session, status: running ? "idle" : "error" }], firebase: "disabled", version: "test",
+    } });
+    if (path === "/api/v1/sessions/session-1/resume") {
+      running = true;
+      return route.fulfill({ json: { ...session, status: "idle" } });
+    }
+    if (path === "/api/v1/sessions/session-1/commands") {
+      if (!running) return route.fulfill({ status: 409, json: { error: "Session is not running" } });
+      const body = request.postDataJSON();
+      if (body.command === "get_messages" || body.command === "get_commands") return route.fulfill({ json: { result: [] } });
+      if (body.command === "get_state") return route.fulfill({ json: { result: { model, thinkingLevel: "medium" } } });
+      if (body.command === "get_available_models") return route.fulfill({ json: { result: [
+        { provider: "openai-codex", id: "gpt-5.5" }, { provider: "openrouter", id: "anthropic/claude-sonnet-4" },
+      ] } });
+      if (body.command === "set_model") {
+        model = { provider: body.payload.provider, id: body.payload.modelId };
+        return route.fulfill({ json: { result: null } });
+      }
+    }
+    return route.fulfill({ status: 404, json: { error: `Unhandled ${request.method()} ${path}` } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /Recovered session/ }).click();
+  const picker = page.getByLabel("Model");
+  await expect(picker).toHaveValue("openai-codex/gpt-5.5");
+  await picker.selectOption("openrouter/anthropic/claude-sonnet-4");
+  await expect(picker).toHaveValue("openrouter/anthropic/claude-sonnet-4");
+});
+
 test("mobile deep link brings the requested interaction into view", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("mobile"), "mobile layout assertion");
   await mockControl(page);
@@ -89,4 +133,16 @@ test("mobile deep link brings the requested interaction into view", async ({ pag
   await expect(target).toBeVisible();
   await expect(target.getByText("multi-select question")).toBeVisible();
   await expect(target).toHaveCSS("scroll-margin-top", /.+/);
+  const sizing = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    bodyWidth: document.body.scrollWidth,
+    scrollHeight: document.documentElement.scrollHeight,
+    viewportHeight: window.innerHeight,
+  }));
+  expect(sizing.documentWidth).toBeLessThanOrEqual(sizing.viewport);
+  expect(sizing.bodyWidth).toBeLessThanOrEqual(sizing.viewport);
+  expect(sizing.scrollHeight).toBeGreaterThan(sizing.viewportHeight);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });

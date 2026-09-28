@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  default as contractExtension,
   buildResult,
   cancelledResult,
   getOtherLabel,
@@ -8,6 +9,11 @@ import {
   sortAnswers,
   unavailableResult,
 } from "../extensions/ask-user-question-contract.ts";
+
+test("contract module is also a valid no-op Pi extension", () => {
+  assert.equal(typeof contractExtension, "function");
+  assert.equal(contractExtension(), undefined);
+});
 
 test("normalizes values and descriptions without changing explicit option values", () => {
   assert.deepEqual(normalizeOptions([{ label: " One ", value: " 1 ", description: " First " }, { label: "Two" }]), [
