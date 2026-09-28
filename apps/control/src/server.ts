@@ -109,6 +109,7 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   app.post("/api/v1/engine/stop", async () => { await engine.stop(); return { status: engine.status() }; });
   app.post("/api/v1/engine/restart", async () => { await engine.restart(); return { status: engine.status() }; });
   app.post("/api/v1/control/restart", async (_request, reply) => {
+    await engine.stop("Control Service restarted");
     await reply.send({ restarting: true });
     setTimeout(() => process.exit(0), 250);
   });

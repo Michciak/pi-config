@@ -58,7 +58,7 @@ export class StateStore {
     this.serverId = row?.value ?? randomUUID();
     if (!row) this.db.prepare("INSERT INTO metadata(key,value) VALUES('server_id',?)").run(this.serverId);
     this.invalidatePending("Control Service restarted");
-    this.db.prepare("UPDATE sessions SET status='interrupted', updated_at=? WHERE status IN ('running','waiting')").run(now());
+    this.db.prepare("UPDATE sessions SET status='interrupted', updated_at=? WHERE status IN ('idle','running','waiting')").run(now());
   }
 
   close(): void { this.db.close(); }

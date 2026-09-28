@@ -50,3 +50,15 @@ test("resolves a question exactly once and preserves FIFO", () => {
     assert.equal(state.firstPendingQuestion("session")?.id, "second");
   } finally { state.close(); }
 });
+
+test("marks resumable sessions interrupted when Control Service restarts", () => {
+  const directory = mkdtempSync(join(tmpdir(), "pi-store-restart-"));
+  const path = join(directory, "state.sqlite");
+  const first = new StateStore(path);
+  first.upsertSession({ id: "idle", name: "Idle", workspace: directory, status: "idle",
+    createdAt: new Date(0).toISOString(), updatedAt: new Date(0).toISOString() });
+  first.close();
+  const reopened = new StateStore(path);
+  try { assert.equal(reopened.session("idle")?.status, "interrupted"); }
+  finally { reopened.close(); }
+});
