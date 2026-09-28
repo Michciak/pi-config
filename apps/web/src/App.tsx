@@ -5,6 +5,7 @@ import type { PromptSnippet } from "@pi-local/prompt-snippets";
 import { connectEvents, controlApi, exchangeHashToken } from "./api.js";
 import { Markdown, messageText } from "./Markdown.js";
 import { QuestionCard } from "./QuestionCard.js";
+import { reduceLiveBlocks, toolEventText, type LiveBlocks } from "./stream.js";
 
 type Model = { provider: string; id: string };
 
@@ -24,6 +25,9 @@ export default function App() {
   const [questions, setQuestions] = useState<UserQuestion[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [events, setEvents] = useState<PiEvent[]>([]);
+  const [liveBlocks, setLiveBlocks] = useState<LiveBlocks>({});
+  const [liveUsage, setLiveUsage] = useState<any>();
+  const [queue, setQueue] = useState<{ steering: string[]; followUp: string[] }>({ steering: [], followUp: [] });
   const [connected, setConnected] = useState(false);
   const [composer, setComposer] = useState("");
   const [delivery, setDelivery] = useState<"prompt" | "steer" | "follow_up">("prompt");
@@ -52,7 +56,11 @@ export default function App() {
   }
 
   async function loadSession(id: string) {
+    const switchingSession = selectedRef.current !== id;
     setSelectedId(id);
+    if (switchingSession) {
+      setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
+    }
     try {
       const [nextMessages, nextState, nextModels, nextCommands] = await Promise.all([
         controlApi.command<any[]>(id, "get_messages"),
@@ -79,7 +87,22 @@ export default function App() {
           if (event.type.startsWith("user_question.") || event.type.startsWith("approval.")) void refresh();
           if (event.type === "ui.setTitle" && typeof (event.payload as any)?.title === "string") document.title = (event.payload as any).title;
           if (event.type === "ui.set_editor_text" && event.sessionId === selectedRef.current) setComposer(String((event.payload as any)?.text ?? ""));
-          if (event.sessionId === selectedRef.current && ["pi.agent_settled", "pi.message_end", "pi.tool_execution_end"].includes(event.type)) void loadSession(event.sessionId);
+          if (event.sessionId === selectedRef.current && event.type === "pi.message_start") {
+            setLiveBlocks({}); setLiveUsage(undefined);
+          }
+          if (event.sessionId === selectedRef.current && event.type === "pi.message_update") {
+            const payload = event.payload as any;
+            setLiveBlocks((current) => reduceLiveBlocks(current, payload.assistantMessageEvent));
+            setLiveUsage(payload.usage);
+          }
+          if (event.sessionId === selectedRef.current && event.type === "pi.queue_update") {
+            const payload = event.payload as any;
+            setQueue({ steering: payload.steering ?? [], followUp: payload.followUp ?? [] });
+          }
+          if (event.sessionId === selectedRef.current && ["pi.agent_settled", "pi.message_end", "pi.tool_execution_end"].includes(event.type)) {
+            if (event.type === "pi.message_end") { setLiveBlocks({}); setLiveUsage(undefined); }
+            void loadSession(event.sessionId);
+          }
         }, setConnected);
       } catch (cause) { setError(String(cause)); }
     })();
@@ -263,12 +286,26 @@ export default function App() {
               <div className="role">{message.role ?? message.type}</div><Markdown>{messageText(message)}</Markdown>
             </article>)}
             {liveEvents.filter((event) => event.type.includes("tool_execution")).map((event) => <article className="tool-event" key={event.seq}>
-              <code>{event.type.replace("pi.", "")}</code><span>{String((event.payload as any)?.toolName ?? "")}</span>
+              <div><code>{event.type.replace("pi.", "")}</code><span>{String((event.payload as any)?.toolName ?? "")}</span></div>
+              {toolEventText(event.payload) && <pre>{toolEventText(event.payload)}</pre>}
             </article>)}
+            {Object.keys(liveBlocks).length > 0 && <article className="message assistant live-message">
+              <div className="role">assistant · streaming{liveUsage?.totalTokens ? ` · ${liveUsage.totalTokens} tokens` : ""}</div>
+              {Object.entries(liveBlocks).sort(([left], [right]) => Number(left) - Number(right)).map(([index, block]) =>
+                block.type === "thinking"
+                  ? <details className="reasoning" open key={index}><summary>Reasoning</summary><Markdown>{block.content}</Markdown></details>
+                  : block.type === "toolcall"
+                    ? <div className="live-tool" key={index}><strong>Tool: {block.toolName ?? "pending"}</strong><pre>{block.content}</pre></div>
+                    : <Markdown key={index}>{block.content}</Markdown>)}
+            </article>}
             <div ref={endRef} />
           </section>
 
           <section className="composer">
+            {(queue.steering.length > 0 || queue.followUp.length > 0) && <div className="queue-state">
+              {queue.steering.map((item, index) => <span key={`s-${index}`}>Steer: {item}</span>)}
+              {queue.followUp.map((item, index) => <span key={`f-${index}`}>Follow-up: {item}</span>)}
+            </div>}
             {images.length > 0 && <div className="attachments">{images.length} obraz(y)</div>}
             <textarea value={composer} rows={3} placeholder="Napisz do Pi…" onChange={(event) => setComposer(event.target.value)}
               onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) void send(); }} />
