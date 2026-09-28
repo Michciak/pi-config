@@ -36,6 +36,7 @@ test("rejects inconsistent, duplicate, late and empty Other answers", () => {
   assert.match(validateQuestionAnswers(question({ mode: "text", options: [] }), [{ type: "text", label: "a", value: "b" }])!, /consistent/i);
   const answer = { type: "option" as const, label: "One", value: "1", index: 1 };
   assert.match(validateQuestionAnswers(question({ mode: "multi-select" }), [answer, answer])!, /more than once/i);
+  assert.match(validateQuestionAnswers(question(), [{ ...answer, value: "tampered" }])!, /does not match/i);
   assert.match(validateQuestionAnswers(question(), [{ type: "other", label: "", value: "" }])!, /non-empty/i);
   assert.match(validateQuestionAnswers(question({ status: "answered" }), [answer])!, /no longer pending/i);
 });

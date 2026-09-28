@@ -134,7 +134,7 @@ export function validateQuestionAnswers(question: UserQuestion, answers: UserAns
       continue;
     }
     const option = known.get(answer.index);
-    if (!option || option.isOther || option.index !== answer.index || option.label !== answer.label) {
+    if (!option || option.isOther || option.index !== answer.index || option.label !== answer.label || option.value !== answer.value) {
       return "Answer does not match an available option";
     }
     const key = `option:${option.index}`;
