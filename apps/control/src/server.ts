@@ -1,0 +1,188 @@
+import { randomInt } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { networkInterfaces } from "node:os";
+import { spawn } from "node:child_process";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import fastifyStatic from "@fastify/static";
+import websocket from "@fastify/websocket";
+import type { PairingRequest, SessionCommand, UserAnswer } from "@pi-local/protocol";
+import { loadSnippets } from "@pi-local/prompt-snippets";
+import type { ControlConfig } from "./config.js";
+import { authorized, isLoopback, randomToken } from "./auth.js";
+import { EngineManager } from "./engine.js";
+import { EventBus } from "./events.js";
+import { FirebaseNotifier } from "./firebase.js";
+import { InteractionBroker } from "./interactions.js";
+import { StateStore } from "./store.js";
+import { resolveFileUnderWorkspace } from "./workspace.js";
+
+interface Dependencies {
+  config: ControlConfig;
+  store: StateStore;
+  events: EventBus;
+  notifier: FirebaseNotifier;
+  interactions: InteractionBroker;
+  engine: EngineManager;
+}
+
+function requireAuth(store: StateStore, request: FastifyRequest): void {
+  if (!authorized(store, request)) throw Object.assign(new Error("Authentication required"), { statusCode: 401 });
+}
+
+export async function buildServer(deps: Dependencies): Promise<FastifyInstance> {
+  const { config, store, events, notifier, interactions, engine } = deps;
+  const app = Fastify({ logger: { level: process.env.PI_WEB_LOG_LEVEL ?? "info" }, bodyLimit: 12 * 1024 * 1024 });
+  await app.register(websocket);
+
+  app.setErrorHandler((error: any, _request, reply) => {
+    const status = Number(error?.statusCode) || 500;
+    if (status >= 500) app.log.error(error);
+    reply.code(status).send({ error: status >= 500 ? "Internal server error" : error.message });
+  });
+
+  app.addHook("preHandler", async (request, reply) => {
+    if (!request.url.startsWith("/api/v1/")) return;
+    const path = request.url.split("?")[0];
+    const publicRoute = path === "/api/v1/auth/exchange" || path === "/api/v1/devices/pair";
+    if (!publicRoute && !authorized(store, request)) return reply.code(401).send({ error: "Authentication required" });
+  });
+
+  app.get("/api/v1/status", async () => ({
+    serverId: store.serverId,
+    control: "online",
+    engine: engine.status(),
+    sessions: engine.sessions(),
+    firebase: notifier.status(),
+    version: "0.1.0",
+  }));
+  app.get("/api/v1/config", async () => ({ workspaceRoot: config.workspaceRoot, port: config.port }));
+  app.get("/api/v1/snippets", async () => loadSnippets(config.snippetsDir));
+
+  app.post("/api/v1/auth/exchange", async (request: any, reply) => {
+    const session = store.exchangeWebToken(String(request.body?.token ?? ""));
+    if (!session) return reply.code(401).send({ error: "Invalid or expired web token" });
+    return { token: session, expiresIn: 12 * 60 * 60 };
+  });
+
+  app.post("/api/v1/pairing/start", async (request, reply) => {
+    if (!isLoopback(request.ip) && !authorized(store, request)) return reply.code(401).send({ error: "Authentication required" });
+    const code = String(randomInt(100000, 1000000));
+    const expiresAt = Date.now() + 5 * 60_000;
+    store.createPairingCode(code, expiresAt);
+    const host = lanAddress();
+    return {
+      code,
+      expiresAt,
+      host,
+      deepLink: `piremote://pair?host=${encodeURIComponent(host)}&port=${config.port}&code=${code}`,
+    };
+  });
+
+  app.post("/api/v1/devices/pair", async (request: any, reply) => {
+    const body = request.body as PairingRequest;
+    if (!body?.code || !body.deviceId || !body.name || !body.publicKey) return reply.code(400).send({ error: "Incomplete pairing request" });
+    if (!store.consumePairingCode(body.code)) return reply.code(401).send({ error: "Invalid or expired pairing code" });
+    store.upsertDevice({ id: body.deviceId, name: body.name, publicKey: body.publicKey, fcmToken: body.fcmToken });
+    events.publish("device.paired", { id: body.deviceId, name: body.name });
+    return { paired: true, serverId: store.serverId };
+  });
+
+  app.post("/api/v1/engine/start", async () => { await engine.start(); return { status: engine.status() }; });
+  app.post("/api/v1/engine/stop", async () => { await engine.stop(); return { status: engine.status() }; });
+  app.post("/api/v1/engine/restart", async () => { await engine.restart(); return { status: engine.status() }; });
+  app.post("/api/v1/control/restart", async (_request, reply) => {
+    await reply.send({ restarting: true });
+    setTimeout(() => process.exit(0), 250);
+  });
+
+  app.get("/api/v1/sessions", async () => engine.sessions());
+  app.post("/api/v1/sessions", async (request: any, reply) => {
+    const body = request.body ?? {};
+    const session = await engine.createSession({ workspace: String(body.workspace ?? ""), name: body.name });
+    return reply.code(201).send(session);
+  });
+  app.post("/api/v1/sessions/import", async (request: any, reply) => {
+    const body = request.body ?? {};
+    const session = await engine.importTerminalSession(String(body.sourcePath ?? ""), String(body.workspace ?? ""), body.name);
+    return reply.code(201).send(session);
+  });
+  app.post("/api/v1/sessions/:id/resume", async (request: any) => engine.resumeSession(request.params.id));
+  app.post("/api/v1/sessions/:id/stop", async (request: any) => { await engine.stopSession(request.params.id, true); return { stopped: true }; });
+  app.post("/api/v1/sessions/:id/commands", async (request: any) => {
+    const result = await engine.execute(request.params.id, request.body as SessionCommand);
+    return { result: result ?? null };
+  });
+
+  app.get("/api/v1/questions", async (request: any) => store.questions(request.query?.status));
+  app.get("/api/v1/questions/:id", async (request: any, reply) => store.question(request.params.id) ?? reply.code(404).send({ error: "Question not found" }));
+  app.post("/api/v1/questions/:id/answer", async (request: any) => interactions.answerQuestion(request.params.id, (request.body?.answers ?? []) as UserAnswer[]));
+  app.post("/api/v1/questions/:id/cancel", async (request: any) => interactions.cancelQuestion(request.params.id));
+
+  app.get("/api/v1/approvals", async (request: any) => store.approvals(request.query?.status));
+  app.get("/api/v1/approvals/:id", async (request: any, reply) => store.approval(request.params.id) ?? reply.code(404).send({ error: "Approval not found" }));
+  app.post("/api/v1/approvals/:id/decision", async (request: any) => interactions.resolveApproval(request.params.id, request.body?.decision === "approve"));
+
+  app.post("/api/v1/devices/:id/fcm-token", async (request: any, reply) => {
+    if (request.headers["x-pi-device"] !== request.params.id) return reply.code(403).send({ error: "Device mismatch" });
+    store.updateDeviceToken(request.params.id, String(request.body?.token ?? ""));
+    return { updated: true };
+  });
+  app.post("/api/v1/devices/:id/web-token", async (request: any, reply) => {
+    if (request.headers["x-pi-device"] !== request.params.id) return reply.code(403).send({ error: "Device mismatch" });
+    const token = randomToken();
+    store.createWebToken(request.params.id, token, Date.now() + 2 * 60_000);
+    const interactionId = typeof request.body?.interactionId === "string" ? request.body.interactionId : undefined;
+    const query = interactionId ? `?interaction=${encodeURIComponent(interactionId)}` : "";
+    return { token, url: `http://${lanAddress()}:${config.port}/${query}#token=${token}` };
+  });
+
+  app.get("/api/v1/files/preview", async (request: any, reply) => {
+    const file = resolveFileUnderWorkspace(config.workspaceRoot, String(request.query?.path ?? ""));
+    const content = readFileSync(file);
+    if (content.length > 1024 * 1024) return reply.code(413).send({ error: "File is larger than 1 MiB" });
+    return { path: file, content: content.toString("utf8") };
+  });
+  app.post("/api/v1/files/open-rider", async (request: any) => {
+    const file = resolveFileUnderWorkspace(config.workspaceRoot, String(request.body?.path ?? ""));
+    const child = spawn("/usr/bin/open", ["-a", "Rider", "--", file], { detached: true, stdio: "ignore" });
+    child.unref();
+    return { opened: true, path: file };
+  });
+
+  app.get("/api/v1/events", { websocket: true }, (socket: any, request: any) => {
+    requireAuth(store, request);
+    const raw = new URL(request.raw.url ?? "/", "http://localhost").searchParams.get("after");
+    const after = Number.parseInt(raw ?? "0", 10) || 0;
+    for (const event of events.after(after)) socket.send(JSON.stringify(event));
+    const unsubscribe = events.subscribe((event) => {
+      if (socket.readyState === 1) socket.send(JSON.stringify(event));
+    });
+    socket.on("close", unsubscribe);
+  });
+
+  if (existsSyncSafe(config.webAssets)) {
+    await app.register(fastifyStatic, { root: config.webAssets, prefix: "/" });
+    app.setNotFoundHandler((request, reply) => {
+      if (request.method === "GET" && !request.url.startsWith("/api/")) return reply.sendFile("index.html");
+      return reply.code(404).send({ error: "Not found" });
+    });
+  } else {
+    app.get("/", async (_request, reply) => reply.type("text/html").send(
+      "<!doctype html><meta charset=utf-8><title>Pi Control</title><h1>Pi Control</h1><p>Web assets are not built. Run <code>npm run build</code>.</p>",
+    ));
+  }
+  return app;
+}
+
+function existsSyncSafe(path: string): boolean {
+  try { return readFileSync(`${path}/index.html`).length > 0; } catch { return false; }
+}
+
+function lanAddress(): string {
+  for (const addresses of Object.values(networkInterfaces())) {
+    for (const address of addresses ?? []) {
+      if (address.family === "IPv4" && !address.internal && !address.address.startsWith("169.254.")) return address.address;
+    }
+  }
+  return "127.0.0.1";
+}
