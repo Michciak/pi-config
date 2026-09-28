@@ -14,6 +14,7 @@
     "build": "npm run build -w @pi-local/protocol && npm run build -w @pi-local/prompt-snippets && npm run build -w @pi-local/web && npm run build -w @pi-local/control",
     "dev": "npm run dev -w @pi-local/control",
     "test": "npm run test -w @pi-local/protocol && npm run test -w @pi-local/prompt-snippets && npm run test -w @pi-local/control && npm run test -w @pi-local/web && node --test tests/*.test.mjs tests/router/*.test.mjs",
+    "test:e2e": "npm run e2e -w @pi-local/web",
     "typecheck": "npm run typecheck -w @pi-local/protocol && npm run typecheck -w @pi-local/prompt-snippets && npm run typecheck -w @pi-local/control && npm run typecheck -w @pi-local/web"
   },
   "keywords": [
