@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+JAR="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+if [ ! -f "$JAR" ]; then
+  echo "Missing gradle-wrapper.jar. Run ../../scripts/bootstrap-android-wrapper.sh once." >&2
+  exit 1
+fi
+exec "${JAVA_HOME:-/Library/Java/JavaVirtualMachines/microsoft-21.jdk/Contents/Home}/bin/java" -classpath "$JAR" org.gradle.wrapper.GradleWrapperMain "$@"
