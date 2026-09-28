@@ -119,6 +119,11 @@ HTTP does not encrypt prompts or answers, so use only a trusted LAN. Mutating
 browser requests from a different Origin and untrusted Host headers are
 rejected. Pairing codes expire after five minutes and attempts are rate-limited.
 
+SQLite event rows retain Pi event type and operational metadata, while live
+WebSocket listeners receive the complete event. Prompt text, assistant text,
+reasoning, tool arguments and tool output are not copied into SQLite; reconnect
+reloads them from the Pi JSONL session.
+
 Runtime data lives in `~/.pi/agent/web-control`; it is not versioned. Removing
 the LaunchAgent leaves that directory and the backed-up global extensions in
 place.

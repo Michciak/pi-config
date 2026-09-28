@@ -5,8 +5,9 @@ import { StateStore } from "./store.js";
 export class EventBus {
   private readonly emitter = new EventEmitter();
   constructor(private readonly store: StateStore) { this.emitter.setMaxListeners(100); }
-  publish(type: string, payload: unknown, sessionId?: string): PiEvent {
-    const event = this.store.appendEvent(type, payload, sessionId);
+  publish(type: string, payload: unknown, sessionId?: string, persistedPayload: unknown = payload): PiEvent {
+    const stored = this.store.appendEvent(type, persistedPayload, sessionId);
+    const event = { ...stored, payload };
     this.emitter.emit("event", event);
     return event;
   }

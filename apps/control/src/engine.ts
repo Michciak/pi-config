@@ -231,7 +231,7 @@ export class EngineManager {
       this.handleUiRequest(sessionId, client, event);
       return;
     }
-    this.events.publish(`pi.${event.type}`, event, sessionId);
+    this.events.publish(`pi.${event.type}`, event, sessionId, persistedPiMetadata(event));
   }
 
   private handleUiRequest(sessionId: string, client: RpcClient, request: any): void {
@@ -315,4 +315,12 @@ export class EngineManager {
       }
     });
   }
+}
+
+function persistedPiMetadata(event: any): Record<string, unknown> {
+  const metadata: Record<string, unknown> = { type: event.type, contentStoredInSessionFile: true };
+  for (const key of ["toolCallId", "toolName", "isError", "reason", "aborted", "willRetry", "attempt", "maxAttempts", "delayMs", "level", "name"]) {
+    if (event[key] !== undefined) metadata[key] = event[key];
+  }
+  return metadata;
 }
