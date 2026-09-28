@@ -61,6 +61,7 @@ import {
   type ActivityReadResult,
   type SubagentActivityState,
 } from "./activity.ts";
+import { registerRpcSubagents } from "./rpc-backend.ts";
 
 /** Absolute path to `pi-extension/subagents`. https://github.com/nodejs/node/issues/37845 */
 const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -1647,6 +1648,10 @@ async function watchSubagent(
 }
 
 export default function subagentsExtension(pi: ExtensionAPI) {
+  if (process.env.PI_SUBAGENT_TRANSPORT === "rpc") {
+    registerRpcSubagents(pi as unknown as import("@earendil-works/pi-coding-agent").ExtensionAPI);
+    return;
+  }
   latestPi = pi;
   // Capture the UI context for widget updates
   pi.on("session_start", (_event, ctx) => {

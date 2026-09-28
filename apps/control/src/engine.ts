@@ -16,6 +16,7 @@ interface RuntimeSession {
   summary: SessionSummary;
   client: RpcClient;
   unsubscribe: () => void;
+  stopping?: boolean;
 }
 
 function now(): string { return new Date().toISOString(); }
@@ -43,8 +44,7 @@ export class EngineManager {
     if (this.statusValue !== "stopped" && this.statusValue !== "crashed") throw new Error(`Engine is ${this.statusValue}`);
     this.setStatus("starting");
     try {
-      this.caffeinate = spawn("/usr/bin/caffeinate", ["-i"], { stdio: "ignore" });
-      this.caffeinate.once("exit", () => { this.caffeinate = undefined; });
+      this.startCaffeinate();
       this.setStatus("running");
     } catch (error) {
       this.setStatus("crashed", { error: String(error) });
@@ -92,6 +92,7 @@ export class EngineManager {
   async stopSession(id: string, interrupted = false): Promise<void> {
     const runtime = this.running.get(id);
     if (!runtime) return;
+    runtime.stopping = true;
     runtime.unsubscribe();
     await runtime.client.stop();
     this.running.delete(id);
@@ -101,7 +102,8 @@ export class EngineManager {
   async importTerminalSession(sourcePath: string, workspace: string, name?: string): Promise<SessionSummary> {
     this.requireRunning();
     const allowed = realpathSync(join(homedir(), ".pi", "agent", "sessions"));
-    const source = realpathSync(sourcePath);
+    const expandedSource = sourcePath.startsWith("~/") ? join(homedir(), sourcePath.slice(2)) : sourcePath;
+    const source = realpathSync(expandedSource);
     const rel = relative(allowed, source);
     if (rel.startsWith("..") || rel.startsWith("/")) throw new Error("Only Pi session files can be imported");
     const targetDir = join(this.config.sessionsDir, "imports");
@@ -171,6 +173,8 @@ export class EngineManager {
         PI_ASK_USER_SOCKET: this.config.socketPath,
         PI_WEB_SESSION_ID: summary.id,
         PI_SUBAGENT_TRANSPORT: "rpc",
+        PI_WEB_WORKSPACE_ROOT: this.config.workspaceRoot,
+        PI_WEB_SUBAGENT_SESSIONS_DIR: join(this.config.sessionsDir, "subagents"),
       },
       args,
     });
@@ -183,6 +187,14 @@ export class EngineManager {
       summary.updatedAt = now();
       this.store.upsertSession(summary);
       this.running.set(summary.id, { summary, client, unsubscribe });
+      const processHandle = (client as unknown as { process?: { once(event: string, listener: (code: unknown, signal: unknown) => void): unknown } }).process;
+      processHandle?.once("exit", (code, signal) => {
+        const runtime = this.running.get(summary.id);
+        if (!runtime || runtime.stopping) return;
+        this.running.delete(summary.id);
+        this.updateSession(summary.id, "error");
+        this.events.publish("session.crashed", { code, signal, stderr: client.getStderr().slice(-4000) }, summary.id);
+      });
       this.events.publish("session.started", summary, summary.id);
     } catch (error) {
       unsubscribe();
@@ -252,5 +264,17 @@ export class EngineManager {
 
   private requireRunning(): void {
     if (this.statusValue !== "running") throw Object.assign(new Error("Pi Engine is not running"), { statusCode: 409 });
+  }
+
+  private startCaffeinate(): void {
+    const processHandle = spawn("/usr/bin/caffeinate", ["-i"], { stdio: "ignore" });
+    this.caffeinate = processHandle;
+    processHandle.once("exit", (code, signal) => {
+      if (this.caffeinate === processHandle) this.caffeinate = undefined;
+      if (this.statusValue === "running") {
+        this.events.publish("engine.caffeinate_restarting", { code, signal });
+        setTimeout(() => { if (this.statusValue === "running" && !this.caffeinate) this.startCaffeinate(); }, 500);
+      }
+    });
   }
 }
