@@ -24,6 +24,13 @@ Deleting a session stops its RPC process, invalidates its pending interactions,
 and removes only the web-owned JSONL copy. An imported terminal source remains
 unchanged.
 
+On desktop, the active-session header includes a compact skills and subagents
+toolbar. Skill buttons insert the real `/skill:*` command reported by Pi;
+subagent buttons prepare an explicit delegation prompt for the selected agent.
+The toolbar is hidden on phone layouts. Typing `/` at the beginning of the
+composer opens the current Pi command catalog and filters it after every typed
+character. Arrow keys, Enter, Tab and Escape operate the suggestion list.
+
 ## First installation
 
 Run from the repository:
