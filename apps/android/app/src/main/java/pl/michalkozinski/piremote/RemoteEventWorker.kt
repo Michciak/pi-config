@@ -22,7 +22,7 @@ class RemoteEventWorker(context: Context, params: WorkerParameters) : Worker(con
                     Notifications.engine(applicationContext, payload.optString("status", "unknown"))
                 }
                 "user_question.created" -> Notifications.question(applicationContext,
-                    payload.getString("id"), payload.optString("sessionId", null))
+                    payload.getString("id"), if (payload.has("sessionId")) payload.optString("sessionId") else null)
             }
         }.fold(onSuccess = { Result.success() }, onFailure = { if (runAttemptCount < 3) Result.retry() else Result.failure() })
     }

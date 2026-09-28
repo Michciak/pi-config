@@ -12,7 +12,10 @@ class DecisionWorker(context: Context, params: WorkerParameters) : Worker(contex
             ApiClient(applicationContext).post("/api/v1/approvals/$id/decision", mapOf("decision" to decision))
         }.fold(
             onSuccess = { Result.success() },
-            onFailure = { if (runAttemptCount < 3) Result.retry() else Result.failure() },
+            onFailure = { failure ->
+                if (failure is ApiException && failure.statusCode == 409) Result.success()
+                else if (runAttemptCount < 3) Result.retry() else Result.failure()
+            },
         )
     }
 }

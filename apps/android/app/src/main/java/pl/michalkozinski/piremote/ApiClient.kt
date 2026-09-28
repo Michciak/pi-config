@@ -65,7 +65,10 @@ class ApiClient(private val context: Context) {
         }
         val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
         val text = stream?.bufferedReader()?.use { it.readText() } ?: "{}"
-        if (connection.responseCode !in 200..299) throw IllegalStateException(JSONObject(text).optString("error", "HTTP ${connection.responseCode}"))
+        if (connection.responseCode !in 200..299) throw ApiException(
+            connection.responseCode,
+            JSONObject(text).optString("error", "HTTP ${connection.responseCode}"),
+        )
         return JSONObject(text)
     }
 
@@ -88,3 +91,5 @@ class ApiClient(private val context: Context) {
     private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
 }
+
+class ApiException(val statusCode: Int, message: String) : IllegalStateException(message)
