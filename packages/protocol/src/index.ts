@@ -117,22 +117,29 @@ export function normalizeOptions(
 export function validateQuestionAnswers(question: UserQuestion, answers: UserAnswer[]): string | null {
   if (question.status !== "pending") return "Question is no longer pending";
   if (question.mode === "text") {
-    return answers.length === 1 && answers[0]?.type === "text" ? null : "Text question requires one text answer";
+    return answers.length === 1 && answers[0]?.type === "text" && answers[0].label === answers[0].value
+      ? null : "Text question requires one consistent text answer";
   }
   if (question.mode === "single-select" && answers.length !== 1) return "Select exactly one answer";
   if (question.mode === "multi-select" && answers.length < 1) return "Select at least one answer";
 
-  const known = new Map(question.options.map((option) => [option.value, option]));
+  const known = new Map(question.options.filter((option) => !option.isOther).map((option) => [option.index, option]));
+  const seen = new Set<string>();
   for (const answer of answers) {
     if (answer.type === "text") return "Text answers are not valid for this question";
     if (answer.type === "other") {
-      if (!question.allowOther || answer.label.trim().length === 0) return "Other requires non-empty text";
+      if (!question.allowOther || answer.label.trim().length === 0 || answer.label !== answer.value) return "Other requires non-empty consistent text";
+      if (seen.has("other")) return "An answer cannot be selected more than once";
+      seen.add("other");
       continue;
     }
-    const option = known.get(answer.value);
+    const option = known.get(answer.index);
     if (!option || option.isOther || option.index !== answer.index || option.label !== answer.label) {
       return "Answer does not match an available option";
     }
+    const key = `option:${option.index}`;
+    if (seen.has(key)) return "An answer cannot be selected more than once";
+    seen.add(key);
   }
   return null;
 }

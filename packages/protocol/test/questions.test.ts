@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeOptions, validateQuestionAnswers, type UserQuestion } from "../src/index.js";
+import { normalizeOptions, validateQuestionAnswers, type UserQuestion } from "../src/index.ts";
 
 function question(overrides: Partial<UserQuestion> = {}): UserQuestion {
   return {
@@ -30,4 +30,12 @@ test("validates text, single and multi answers", () => {
   assert.equal(validateQuestionAnswers(question(), [{ type: "option", label: "One", value: "1", index: 1 }]), null);
   assert.match(validateQuestionAnswers(question(), []), /exactly one/i);
   assert.equal(validateQuestionAnswers(question({ mode: "multi-select" }), [{ type: "other", label: "Custom", value: "Custom" }]), null);
+});
+
+test("rejects inconsistent, duplicate, late and empty Other answers", () => {
+  assert.match(validateQuestionAnswers(question({ mode: "text", options: [] }), [{ type: "text", label: "a", value: "b" }])!, /consistent/i);
+  const answer = { type: "option" as const, label: "One", value: "1", index: 1 };
+  assert.match(validateQuestionAnswers(question({ mode: "multi-select" }), [answer, answer])!, /more than once/i);
+  assert.match(validateQuestionAnswers(question(), [{ type: "other", label: "", value: "" }])!, /non-empty/i);
+  assert.match(validateQuestionAnswers(question({ status: "answered" }), [answer])!, /no longer pending/i);
 });
