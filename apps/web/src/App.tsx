@@ -291,7 +291,7 @@ export default function App() {
   }
 
   return <div className="app-shell">
-    <header>
+    <header className="app-header">
       <div className="brand"><span className="logo">π</span><span className="brand-copy"><strong>Pi Remote</strong><small>Local AI workspace</small></span></div>
       <div className="status-row">
         <span className={`dot ${connected ? "ok" : "bad"}`} />Control
