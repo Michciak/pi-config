@@ -96,7 +96,7 @@ export function normalizeOptions(
   values: Array<{ label: string; value?: string; description?: string }> | undefined,
   allowOther = true,
 ): AskOption[] {
-  const options = (values ?? [])
+  const options: AskOption[] = (values ?? [])
     .map((option, zeroIndex) => ({
       id: `option:${zeroIndex}`,
       label: option.label.trim(),
