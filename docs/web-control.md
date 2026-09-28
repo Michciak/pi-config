@@ -34,6 +34,11 @@ global Pi extension it replaces, installs the RPC-aware extensions, writes a
 user LaunchAgent and starts Control Service. It does not change Pi provider
 authentication, Cursor configuration, terminal configuration or tmux.
 
+An already loaded LaunchAgent is restarted in place with `kickstart`. On macOS
+26 systems where `launchctl bootstrap` returns error 5 for a valid unloaded
+agent, the installer starts a detached per-user fallback for the current login
+session and leaves the LaunchAgent installed for the next login.
+
 The allowed workspace root defaults to:
 
 ```text
