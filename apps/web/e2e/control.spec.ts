@@ -65,10 +65,10 @@ test("submits text, single-select, multi-select and custom Other answers", async
   await expect.poll(() => answers.get("text")).toEqual([{ type: "text", label: "", value: "" }]);
 
   const singleCard = page.locator("#interaction-single");
-  await singleCard.getByText("Alpha").click();
+  await singleCard.getByText("2. Other", { exact: true }).click();
   await singleCard.getByRole("button", { name: "Odpowiedz" }).click();
   await expect.poll(() => answers.get("single")).toEqual([
-    { type: "option", label: "Alpha", value: "alpha-value", index: 1 },
+    { type: "option", label: "Other", value: "literal-other", index: 2 },
   ]);
 
   const multiCard = page.locator("#interaction-multi");

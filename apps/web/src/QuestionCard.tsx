@@ -12,6 +12,7 @@ export function QuestionCard(props: {
   const [other, setOther] = useState("");
   const [busy, setBusy] = useState(false);
   const options = useMemo(() => question.options.filter((option) => !option.isOther), [question.options]);
+  const otherLabel = useMemo(() => question.options.find((option) => option.isOther)?.label ?? "Other", [question.options]);
 
   async function submit() {
     setBusy(true);
@@ -58,7 +59,7 @@ export function QuestionCard(props: {
       {question.allowOther && <label className="option">
         <input type={question.mode === "single-select" ? "radio" : "checkbox"}
           checked={selected.includes("other")} onChange={() => choose("other")} />
-        <span><strong>Other</strong><input className="other-input" value={other}
+        <span><strong>{otherLabel}</strong><input className="other-input" value={other}
           onFocus={() => !selected.includes("other") && choose("other")}
           onChange={(event) => setOther(event.target.value)} placeholder="Własna odpowiedź" /></span>
       </label>}
