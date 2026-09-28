@@ -81,7 +81,7 @@ test("submits text, single-select, multi-select and custom Other answers", async
   ]);
 });
 
-test("resumes a stopped RPC session and applies a model selection", async ({ page }) => {
+test("resumes a stopped RPC session and exposes contextual launchers", async ({ page }, testInfo) => {
   const session = {
     id: "session-1", name: "Recovered session", workspace: "/Dropbox/NETRIX/project",
     status: "error", createdAt: now, updatedAt: now,
@@ -101,10 +101,18 @@ test("resumes a stopped RPC session and applies a model selection", async ({ pag
       running = true;
       return route.fulfill({ json: { ...session, status: "idle" } });
     }
+    if (path === "/api/v1/sessions/session-1/subagents") return route.fulfill({ json: [{
+      name: "scout", description: "Fast reconnaissance", tools: ["read"], skills: [], subagents: [], source: "global",
+    }] });
     if (path === "/api/v1/sessions/session-1/commands") {
       if (!running) return route.fulfill({ status: 409, json: { error: "Session is not running" } });
       const body = request.postDataJSON();
-      if (body.command === "get_messages" || body.command === "get_commands") return route.fulfill({ json: { result: [] } });
+      if (body.command === "get_messages") return route.fulfill({ json: { result: [] } });
+      if (body.command === "get_commands") return route.fulfill({ json: { result: [
+        { name: "route", description: "Delegate work", source: "extension", sourceInfo: { scope: "user" } },
+        { name: "router", description: "Route alias", source: "extension", sourceInfo: { scope: "user" } },
+        { name: "skill:web-debug", description: "Debug a web page", source: "skill", sourceInfo: { scope: "user" } },
+      ] } });
       if (body.command === "get_state") return route.fulfill({ json: { result: { model, thinkingLevel: "medium" } } });
       if (body.command === "get_available_models") return route.fulfill({ json: { result: [
         { provider: "openai-codex", id: "gpt-5.5" }, { provider: "openrouter", id: "anthropic/claude-sonnet-4" },
@@ -123,6 +131,26 @@ test("resumes a stopped RPC session and applies a model selection", async ({ pag
   await expect(picker).toHaveValue("openai-codex/gpt-5.5");
   await picker.selectOption("openrouter/anthropic/claude-sonnet-4");
   await expect(picker).toHaveValue("openrouter/anthropic/claude-sonnet-4");
+
+  const composer = page.getByPlaceholder(/Napisz do Pi/);
+  await composer.fill("/skill:w");
+  await expect(page.getByRole("option", { name: /skill:web-debug/ })).toBeVisible();
+  await composer.press("Enter");
+  await expect(composer).toHaveValue("/skill:web-debug ");
+
+  const toolbar = page.getByRole("navigation", { name: "Szybkie wywołania skilli i subagentów" });
+  if (testInfo.project.name.startsWith("mobile")) {
+    await expect(toolbar).toBeHidden();
+  } else {
+    await expect(toolbar).toBeVisible();
+    await composer.fill("");
+    await toolbar.getByRole("button", { name: "scout" }).click();
+    await expect(composer).toHaveValue(/profilem "scout"/);
+    await page.getByRole("button", { name: "Narzędzia" }).click();
+    await expect(page.getByText("Narzędzia sesji")).toBeVisible();
+    await expect(page.getByText("Automatyzacja", { exact: true })).toBeVisible();
+    await expect(page.getByText("Bezpośredni bash", { exact: true })).toBeVisible();
+  }
 });
 
 test("shows a newly created session immediately and allows deleting it", async ({ page }) => {

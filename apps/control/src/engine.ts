@@ -6,6 +6,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RpcClient } from "@earendil-works/pi-coding-agent";
 import type { EngineStatus, SessionCommand, SessionSummary, SessionStatus } from "@pi-local/protocol";
+import { discoverSubagents, type SubagentProfile } from "./catalog.js";
 import type { ControlConfig } from "./config.js";
 import { EventBus } from "./events.js";
 import { InteractionBroker } from "./interactions.js";
@@ -65,6 +66,12 @@ export class EngineManager {
   async restart(): Promise<void> { await this.stop("Engine restarted"); await this.start(); }
 
   sessions(): SessionSummary[] { return this.store.sessions(); }
+
+  subagents(id: string): SubagentProfile[] {
+    const summary = this.store.session(id);
+    if (!summary) throw Object.assign(new Error("Session not found"), { statusCode: 404 });
+    return discoverSubagents(summary.workspace);
+  }
 
   async createSession(input: { workspace: string; name?: string; sessionPath?: string }): Promise<SessionSummary> {
     this.requireRunning();

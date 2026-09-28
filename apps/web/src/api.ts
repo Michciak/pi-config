@@ -1,6 +1,16 @@
 import type { Approval, PiEvent, ServerStatus, SessionCommand, SessionSummary, UserAnswer, UserQuestion } from "@pi-local/protocol";
 import type { PromptSnippet } from "@pi-local/prompt-snippets";
 
+export interface SubagentProfile {
+  name: string;
+  description?: string;
+  tools: string[];
+  skills: string[];
+  subagents: string[];
+  thinking?: string;
+  source: "global" | "project";
+}
+
 const SESSION_KEY = "pi-web-session";
 let token = sessionStorage.getItem(SESSION_KEY) ?? "";
 
@@ -48,6 +58,7 @@ export const controlApi = {
   resumeSession: (id: string) => api<SessionSummary>(`/sessions/${id}/resume`, { method: "POST" }),
   stopSession: (id: string) => api(`/sessions/${id}/stop`, { method: "POST" }),
   deleteSession: (id: string) => api<void>(`/sessions/${id}`, { method: "DELETE" }),
+  subagents: (id: string) => api<SubagentProfile[]>(`/sessions/${id}/subagents`),
   command: <T = unknown>(id: string, command: string, payload: Record<string, unknown> = {}) =>
     api<{ result: T }>(`/sessions/${id}/commands`, { method: "POST", body: JSON.stringify({ command, payload } satisfies SessionCommand) }).then((value) => value.result),
   questions: () => api<UserQuestion[]>("/questions"),

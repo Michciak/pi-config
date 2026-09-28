@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type { Approval, PiEvent, ServerStatus, SessionSummary, UserQuestion } from "@pi-local/protocol";
 import type { PromptSnippet } from "@pi-local/prompt-snippets";
-import { ApiError, connectEvents, controlApi, exchangeHashToken } from "./api.js";
+import { ApiError, connectEvents, controlApi, exchangeHashToken, type SubagentProfile } from "./api.js";
+import { commandSuggestions, selectSlashCommand, type SlashCommand } from "./commandPalette.js";
 import { Markdown, messageText } from "./Markdown.js";
 import { QuestionCard } from "./QuestionCard.js";
 import { reduceLiveBlocks, toolEventText, type LiveBlocks } from "./stream.js";
@@ -19,7 +20,8 @@ export default function App() {
   const [messages, setMessages] = useState<any[]>([]);
   const [sessionState, setSessionState] = useState<any>();
   const [models, setModels] = useState<Model[]>([]);
-  const [commands, setCommands] = useState<any[]>([]);
+  const [commands, setCommands] = useState<SlashCommand[]>([]);
+  const [subagents, setSubagents] = useState<SubagentProfile[]>([]);
   const [snippets, setSnippets] = useState<PromptSnippet[]>([]);
   const [enabledSnippets, setEnabledSnippets] = useState<Set<string>>(new Set());
   const [questions, setQuestions] = useState<UserQuestion[]>([]);
@@ -41,7 +43,10 @@ export default function App() {
   const [pairing, setPairing] = useState<{ code: string; expiresAt: number; host: string; deepLink: string }>();
   const [deleteTarget, setDeleteTarget] = useState<SessionSummary>();
   const endRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const selectedRef = useRef<string | undefined>(undefined);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [slashDismissed, setSlashDismissed] = useState(false);
   const selected = status?.sessions.find((session) => session.id === selectedId);
   const interactionTarget = new URLSearchParams(location.search).get("interaction");
 
@@ -66,18 +71,19 @@ export default function App() {
   function clearSessionView() {
     selectedRef.current = undefined;
     setSelectedId(undefined);
-    setMessages([]); setSessionState(undefined); setModels([]); setCommands([]);
+    setMessages([]); setSessionState(undefined); setModels([]); setCommands([]); setSubagents([]);
     setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
   }
 
   async function readSession(id: string) {
-    const [nextMessages, nextState, nextModels, nextCommands] = await Promise.all([
+    const [nextMessages, nextState, nextModels, nextCommands, nextSubagents] = await Promise.all([
       controlApi.command<any[]>(id, "get_messages"),
       controlApi.command(id, "get_state"),
       controlApi.command<Model[]>(id, "get_available_models"),
-      controlApi.command<any[]>(id, "get_commands"),
+      controlApi.command<SlashCommand[]>(id, "get_commands"),
+      controlApi.subagents(id).catch(() => []),
     ]);
-    setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands);
+    setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands); setSubagents(nextSubagents);
   }
 
   async function loadSession(id: string, resumeIfNeeded = true) {
@@ -85,6 +91,7 @@ export default function App() {
     setSelectedId(id);
     if (switchingSession) {
       setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
+      setAdvanced(false);
     }
     try {
       await readSession(id);
@@ -173,6 +180,11 @@ export default function App() {
     left.id === interactionTarget ? -1 : right.id === interactionTarget ? 1 : 0);
   const pendingQuestions = targetFirst(questions.filter((item) => item.status === "pending"));
   const pendingApprovals = targetFirst(approvals.filter((item) => item.status === "pending"));
+  const skills = useMemo(() => commands.filter((command) => command.source === "skill"), [commands]);
+  const suggestions = useMemo(() => commandSuggestions(commands, composer), [commands, composer]);
+  const showSuggestions = !slashDismissed && suggestions.length > 0;
+
+  useEffect(() => { setSuggestionIndex(0); }, [composer]);
 
   async function engineAction(action: "start" | "stop" | "restart") {
     try { await controlApi.engine(action); await refresh(); } catch (cause) { setError(String(cause)); }
@@ -208,6 +220,34 @@ export default function App() {
       setError("");
       await refresh();
     } catch (cause) { setError(String(cause)); }
+  }
+
+  function focusComposer() {
+    requestAnimationFrame(() => {
+      composerRef.current?.focus();
+      const end = composerRef.current?.value.length ?? 0;
+      composerRef.current?.setSelectionRange(end, end);
+    });
+  }
+
+  function chooseCommand(command: SlashCommand) {
+    setComposer(selectSlashCommand(command.name));
+    setSlashDismissed(true);
+    focusComposer();
+  }
+
+  function chooseSkill(command: SlashCommand) {
+    const existing = composer.trim();
+    setComposer(`${selectSlashCommand(command.name)}${existing}`);
+    setSlashDismissed(true);
+    focusComposer();
+  }
+
+  function chooseSubagent(profile: SubagentProfile) {
+    const lead = `Użyj narzędzia subagent z profilem "${profile.name}", aby wykonać zadanie: `;
+    setComposer(`${lead}${composer.trim()}`);
+    setSlashDismissed(true);
+    focusComposer();
   }
 
   async function send() {
@@ -311,18 +351,32 @@ export default function App() {
       <main className="conversation">
         {selected ? <>
           <div className="conversation-head">
-            <div><span className="eyebrow">ACTIVE SESSION</span><h1>{selected.name}</h1><p>{selected.workspace}</p></div>
-            <div className="model-controls">
-              <select aria-label="Model" value={sessionState?.model ? `${sessionState.model.provider}/${sessionState.model.id}` : ""}
+            <div className="session-identity">
+              <div className="session-kicker"><span><i className={`session-dot ${selected.status}`} />Aktywna sesja</span><b>{selected.status}</b></div>
+              <h1>{selected.name}</h1>
+              <p title={selected.workspace}><span>⌁</span>{selected.workspace}</p>
+            </div>
+            <div className="session-controls">
+              <label><span>Model</span><select aria-label="Model" value={sessionState?.model ? `${sessionState.model.provider}/${sessionState.model.id}` : ""}
                 onChange={(event) => void changeModel(event.target.value)}>
-                <option value="">Model</option>{models.map((model) => <option key={`${model.provider}/${model.id}`}>{model.provider}/{model.id}</option>)}
-              </select>
-              <select value={sessionState?.thinkingLevel ?? "medium"} onChange={(event) => void inspect("set_thinking_level", { level: event.target.value })}>
+                <option value="">Wybierz model</option>{models.map((model) => <option key={`${model.provider}/${model.id}`}>{model.provider}/{model.id}</option>)}
+              </select></label>
+              <label className="thinking-control"><span>Myślenie</span><select aria-label="Poziom myślenia" value={sessionState?.thinkingLevel ?? "medium"} onChange={(event) => void inspect("set_thinking_level", { level: event.target.value })}>
                 {['off','minimal','low','medium','high','xhigh','max'].map((level) => <option key={level}>{level}</option>)}
-              </select>
-              <button className="ghost" onClick={() => setAdvanced(!advanced)}>Narzędzia</button>
+              </select></label>
+              <button className={`tools-toggle ghost ${advanced ? "active" : ""}`} aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}><span>⌘</span>Narzędzia</button>
             </div>
           </div>
+
+          {(skills.length > 0 || subagents.length > 0) && <nav className="capability-toolbar" aria-label="Szybkie wywołania skilli i subagentów">
+            {skills.length > 0 && <div className="capability-group"><span>Skills</span><div>{skills.map((skill) => <button key={skill.name} title={skill.description} onClick={() => chooseSkill(skill)}>
+              <i>✦</i>{skill.name.replace(/^skill:/, "")}
+            </button>)}</div></div>}
+            {skills.length > 0 && subagents.length > 0 && <span className="capability-divider" />}
+            {subagents.length > 0 && <div className="capability-group"><span>Subagenci</span><div>{subagents.map((profile) => <button key={profile.name} title={profile.description} onClick={() => chooseSubagent(profile)}>
+              <i>◎</i>{profile.name}
+            </button>)}</div></div>}
+          </nav>}
 
           {(extensionUi.statuses.length > 0 || extensionUi.widgets.length > 0 || extensionUi.notices.length > 0) && <section className="extension-ui">
             {extensionUi.statuses.map(([key, value]) => <div className="extension-status" key={key}><small>{key}</small><span>{value}</span></div>)}
@@ -331,32 +385,55 @@ export default function App() {
           </section>}
 
           {advanced && <section className="advanced">
-            {snippets.length > 0 && <details className="snippet-picker"><summary>Prompt snippets ({enabledSnippets.size})</summary>
-              <div>{snippets.map((snippet) => <label key={snippet.id}>
-                <input type="checkbox" checked={enabledSnippets.has(snippet.id)} onChange={() => setEnabledSnippets((current) => {
-                  const next = new Set(current); next.has(snippet.id) ? next.delete(snippet.id) : next.add(snippet.id); return next;
-                })} />
-                <span><strong>{snippet.name}</strong><small>{snippet.placement} · {snippet.description}</small></span>
-              </label>)}</div>
-            </details>}
-            <div className="button-grid">
-              {([["Statystyki","get_session_stats"],["Drzewo","get_tree"],["Forki","get_fork_messages"],["Komendy","get_commands"],["Eksport HTML","export_html"],["Kompaktuj","compact"]] as const).map(([label, command]) =>
-                <button className="ghost" key={command} onClick={() => inspect(command)}>{label}</button>)}
-              <button className="ghost" onClick={() => inspect("clone")}>Klonuj sesję</button>
-              <button className="ghost" onClick={() => inspect("clear_queue")}>Wyczyść kolejkę</button>
-              <button className="ghost" onClick={() => inspect("set_auto_retry", { enabled: true })}>Auto retry: włącz</button>
-              <button className="ghost" onClick={() => inspect("abort_retry")}>Przerwij retry</button>
-              <button className="ghost" onClick={() => inspect("set_auto_compaction", { enabled: true })}>Auto compaction: włącz</button>
-              <button className="danger ghost" onClick={() => selectedId && controlApi.stopSession(selectedId).then(refresh)}>Zatrzymaj sesję</button>
+            <header className="advanced-head">
+              <div><span className="advanced-icon">⌘</span><span><b>Narzędzia sesji</b><small>Operacje, automatyzacja i diagnostyka</small></span></div>
+              <button className="ghost" aria-label="Zamknij panel narzędzi" onClick={() => setAdvanced(false)}>×</button>
+            </header>
+            <div className="tools-dashboard">
+              <article className="tool-card operations-card">
+                <div className="tool-card-head"><span>Operacje</span><small>Stan i historia sesji</small></div>
+                <div className="tool-actions">
+                  {([["◔","Statystyki","get_session_stats"],["⌘","Drzewo","get_tree"],["⑂","Forki","get_fork_messages"],["⇩","Eksport","export_html"],["◫","Kompaktuj","compact"]] as const).map(([icon, label, command]) =>
+                    <button className="tool-action" key={command} onClick={() => inspect(command)}><i>{icon}</i><span>{label}</span></button>)}
+                  <button className="tool-action" onClick={() => inspect("clone")}><i>◇</i><span>Klonuj</span></button>
+                </div>
+              </article>
+              <article className="tool-card automation-card">
+                <div className="tool-card-head"><span>Automatyzacja</span><small>Odzyskiwanie i kolejka</small></div>
+                <div className="setting-list">
+                  <button onClick={() => inspect("set_auto_retry", { enabled: true })}><span><i>↻</i><b>Auto retry</b></span><em>Włącz</em></button>
+                  <button onClick={() => inspect("set_auto_compaction", { enabled: true })}><span><i>◈</i><b>Auto compaction</b></span><em>Włącz</em></button>
+                  <button onClick={() => inspect("clear_queue")}><span><i>≡</i><b>Kolejka</b></span><em>Wyczyść</em></button>
+                  <button className="danger-row" onClick={() => inspect("abort_retry")}><span><i>×</i><b>Aktywny retry</b></span><em>Przerwij</em></button>
+                </div>
+              </article>
+              {snippets.length > 0 && <article className="tool-card snippets-card">
+                <div className="tool-card-head"><span>Prompt snippets</span><small>{enabledSnippets.size} aktywne</small></div>
+                <div className="snippet-list">{snippets.map((snippet) => <label key={snippet.id}>
+                  <input type="checkbox" checked={enabledSnippets.has(snippet.id)} onChange={() => setEnabledSnippets((current) => {
+                    const next = new Set(current); next.has(snippet.id) ? next.delete(snippet.id) : next.add(snippet.id); return next;
+                  })} />
+                  <span><strong>{snippet.name}</strong><small>{snippet.placement} · {snippet.description}</small></span>
+                </label>)}</div>
+              </article>}
+              <article className="tool-card session-edit-card">
+                <div className="tool-card-head"><span>Sesja</span><small>Nazwa, fork i proces</small></div>
+                <label className="tool-field"><span>Nazwa</span><div><input value={rename} onChange={(event) => setRename(event.target.value)} placeholder={selected.name} />
+                  <button onClick={() => inspect("set_session_name", { name: rename }).then(() => { setRename(""); void refresh(); })}>Zapisz</button></div></label>
+                <label className="tool-field"><span>Fork od ID wpisu</span><div><input value={entryId} onChange={(event) => setEntryId(event.target.value)} placeholder="entry-id" />
+                  <button className="ghost" onClick={() => inspect("fork", { entryId })}>Utwórz</button></div></label>
+                <button className="stop-session" onClick={() => selectedId && controlApi.stopSession(selectedId).then(refresh)}>Zatrzymaj proces sesji</button>
+              </article>
+              <article className="tool-card terminal-card">
+                <div className="tool-card-head"><span>Bezpośredni bash</span><small>Uruchom w workspace sesji</small></div>
+                <div className="terminal-input"><span>$</span><input value={bash} onChange={(event) => setBash(event.target.value)} placeholder="Wpisz komendę…" /></div>
+                <div className="terminal-actions"><button onClick={() => inspect("bash", { command: bash })}>Uruchom</button><button className="ghost" onClick={() => inspect("abort_bash")}>Przerwij</button></div>
+              </article>
             </div>
-            <div className="bash-row"><input value={rename} onChange={(event) => setRename(event.target.value)} placeholder={selected.name} />
-              <button className="ghost" onClick={() => inspect("set_session_name", { name: rename }).then(() => { setRename(""); void refresh(); })}>Zmień nazwę</button></div>
-            <div className="bash-row"><input value={entryId} onChange={(event) => setEntryId(event.target.value)} placeholder="ID wpisu dla fork" />
-              <button className="ghost" onClick={() => inspect("fork", { entryId })}>Fork od wpisu</button></div>
-            <div className="bash-row"><input value={bash} onChange={(event) => setBash(event.target.value)} placeholder="Bezpośrednia komenda bash" />
-              <button onClick={() => inspect("bash", { command: bash })}>Uruchom</button><button className="ghost" onClick={() => inspect("abort_bash")}>Przerwij</button></div>
-            {inspection !== undefined && <pre>{JSON.stringify(inspection, null, 2)}</pre>}
-            <details><summary>Dostępne komendy slash ({commands.length})</summary><ul>{commands.map((command: any) => <li key={command.name}><code>/{command.name}</code> {command.description}</li>)}</ul></details>
+            {inspection !== undefined && <div className="inspection-result"><header><span>Wynik operacji</span><button className="ghost" onClick={() => setInspection(undefined)}>×</button></header><pre>{JSON.stringify(inspection, null, 2)}</pre></div>}
+            <details className="command-reference"><summary><span>Komendy slash</span><small>{commands.length} dostępnych</small></summary><ul>{commands.map((command) => <li key={command.name}>
+              <button onClick={() => { chooseCommand(command); setAdvanced(false); }}><code>/{command.name}</code><span>{command.description}</span><em>{command.source}</em></button>
+            </li>)}</ul></details>
           </section>}
 
           <section className="messages">
@@ -385,8 +462,28 @@ export default function App() {
               {queue.followUp.map((item, index) => <span key={`f-${index}`}>Follow-up: {item}</span>)}
             </div>}
             {images.length > 0 && <div className="attachments">{images.length} obraz(y)</div>}
-            <textarea value={composer} rows={3} placeholder="Napisz do Pi…" onChange={(event) => setComposer(event.target.value)}
-              onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) void send(); }} />
+            <div className="composer-input">
+              {showSuggestions && <div id="slash-suggestions" className="slash-suggestions" role="listbox" aria-label="Dostępne komendy slash">
+                <header><span>Komendy Pi</span><small>↑↓ wybierz · Enter zatwierdź · Esc zamknij</small></header>
+                {suggestions.map((command, index) => <button type="button" role="option" aria-selected={index === suggestionIndex}
+                  className={index === suggestionIndex ? "active" : ""} key={command.name}
+                  onMouseDown={(event) => event.preventDefault()} onClick={() => chooseCommand(command)}>
+                  <span className={`command-source ${command.source}`}>{command.source === "skill" ? "✦" : command.source === "prompt" ? "▤" : "⌘"}</span>
+                  <span><strong>/{command.name}</strong><small>{command.description || "Brak opisu"}</small></span>
+                  <em>{command.source === "skill" ? "skill" : command.source === "prompt" ? "prompt" : "extension"}</em>
+                </button>)}
+              </div>}
+              <textarea ref={composerRef} value={composer} rows={3} placeholder="Napisz do Pi…  Wpisz /, aby zobaczyć komendy" onChange={(event) => { setComposer(event.target.value); setSlashDismissed(false); }}
+                aria-autocomplete="list" aria-controls={showSuggestions ? "slash-suggestions" : undefined}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void send(); return; }
+                  if (!showSuggestions) return;
+                  if (event.key === "ArrowDown") { event.preventDefault(); setSuggestionIndex((current) => (current + 1) % suggestions.length); }
+                  else if (event.key === "ArrowUp") { event.preventDefault(); setSuggestionIndex((current) => (current - 1 + suggestions.length) % suggestions.length); }
+                  else if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); chooseCommand(suggestions[suggestionIndex] ?? suggestions[0]!); }
+                  else if (event.key === "Escape") { event.preventDefault(); setSlashDismissed(true); }
+                }} />
+            </div>
             <div><label className="attach">＋ Obraz<input type="file" accept="image/*" multiple onChange={(event) => void chooseImages(event.target.files)} /></label>
               <select value={delivery} onChange={(event) => setDelivery(event.target.value as any)}><option value="prompt">Prompt</option><option value="steer">Steer</option><option value="follow_up">Follow-up</option></select>
               <button className="danger ghost" onClick={() => inspect("abort")}>Przerwij</button><button onClick={send}>Wyślij ⌘↵</button></div>

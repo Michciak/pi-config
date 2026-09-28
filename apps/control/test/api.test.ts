@@ -15,7 +15,11 @@ test("serves OpenAPI and applies exactly-once question responses", async () => {
   const notifier = { status: () => "disabled", send: async () => {} } as any;
   const interactions = new InteractionBroker(store, events, notifier);
   let deletedId: string | undefined;
-  const engine = { status: () => "stopped", sessions: () => [], deleteSession: async (id: string) => { deletedId = id; } } as any;
+  const engine = {
+    status: () => "stopped", sessions: () => [],
+    subagents: (id: string) => [{ name: "scout", description: `Scout for ${id}`, tools: ["read"], skills: [], subagents: [], source: "global" }],
+    deleteSession: async (id: string) => { deletedId = id; },
+  } as any;
   const config = { host: "127.0.0.1", port: 3784, runtimeDir: directory,
     databasePath: join(directory, "state.sqlite"), socketPath: join(directory, "socket"),
     sessionsDir: join(directory, "sessions"), workspaceRoot: directory,
@@ -36,5 +40,8 @@ test("serves OpenAPI and applies exactly-once question responses", async () => {
     const deleted = await app.inject({ method: "DELETE", url: "/api/v1/sessions/session-1", headers: { host: "127.0.0.1:3784" } });
     assert.equal(deleted.statusCode, 204);
     assert.equal(deletedId, "session-1");
+    const subagents = await app.inject({ method: "GET", url: "/api/v1/sessions/session-1/subagents", headers: { host: "127.0.0.1:3784" } });
+    assert.equal(subagents.statusCode, 200);
+    assert.equal(subagents.json()[0].name, "scout");
   } finally { await app.close(); store.close(); }
 });
