@@ -19,6 +19,10 @@ supported by this setup.
 Each web session owns a separate Pi process through `RpcClient`. Terminal Pi
 continues to use its own session file and its existing tmux subagent backend.
 Importing a terminal session copies its JSONL before the web process opens it.
+New sessions are inserted into the panel immediately after the API responds.
+Deleting a session stops its RPC process, invalidates its pending interactions,
+and removes only the web-owned JSONL copy. An imported terminal source remains
+unchanged.
 
 ## First installation
 
