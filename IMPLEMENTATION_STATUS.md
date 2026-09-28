@@ -1,6 +1,6 @@
 # Pi local implementation status
 
-Updated: 2026-09-25
+Updated: 2026-09-28
 Repository: `/Users/michalkozinski/projects/pi-config`
 
 ## User decisions
@@ -23,6 +23,19 @@ Repository: `/Users/michalkozinski/projects/pi-config`
 - Secrets: remain in `~/.pi/agent/auth.json`; no secrets are tracked
 
 ## Plan progress
+
+### Pi Local Web Control delivery
+
+The repository now includes the Control Service, manual RPC Engine, responsive
+web panel, brokered extension UI, versioned `ask_user_question`, nested RPC
+subagents, signed Android/FCM client, LaunchAgent installer, Keychain helpers,
+diagnostics and backup tooling. These changes are committed in an isolated
+delivery clone and have not modified the live global Pi runtime.
+
+Pure contract, workspace containment, SQLite transition, event cursor and ECDSA
+replay tests pass on Node 26. Full npm, Playwright, Android and S24/Watch 7
+acceptance still require dependency downloads plus the user's Firebase files
+and devices; the current sandbox cannot resolve `registry.npmjs.org`.
 
 | Plan stage | Status | Result |
 |---|---|---|
