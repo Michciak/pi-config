@@ -1,39 +1,15 @@
 import ReactMarkdown from "react-markdown";
 import { controlApi } from "./api.js";
+import { linkLocalReferences, localFilePath } from "./fileReferences.js";
 
-function filePath(href: string): string | null {
-  try {
-    if (href.startsWith("file://")) return decodeURIComponent(new URL(href).pathname);
-    if (href.startsWith("/Users/")) return decodeURIComponent(href);
-  } catch {}
-  return null;
-}
-
-function linkAbsolutePaths(markdown: string): string {
-  let fence: string | undefined;
-  return markdown.split("\n").map((line) => {
-    const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
-    if (fence) {
-      if (marker?.startsWith(fence[0]!) && marker.length >= fence.length) fence = undefined;
-      return line;
-    }
-    if (marker) { fence = marker; return line; }
-    if (/^\s{4}/.test(line)) return line;
-    return line.replace(/(?<![\w(<])\/Users\/[\w@+., ()\-/]+\.[\w+.-]+(?::\d+(?::\d+)?)?/g, (reference) => {
-      const path = reference.replace(/:\d+(?::\d+)?$/, "");
-      return `[${reference.replace(/[\[\]]/g, "\\$&")}](<${encodeURI(`file://${path}`)}>)`;
-    });
-  }).join("\n");
-}
-
-export function Markdown({ children }: { children: string }) {
+export function Markdown({ children, workspace }: { children: string; workspace?: string }) {
   return <ReactMarkdown components={{
     a({ href = "", children: label }) {
-      const path = filePath(href);
+      const path = localFilePath(href, workspace);
       if (path) return <button className="file-link" title={path} onClick={() => void controlApi.openRider(path)}>{label}</button>;
       return <a href={href} target="_blank" rel="noreferrer">{label}</a>;
     },
-  }}>{linkAbsolutePaths(children)}</ReactMarkdown>;
+  }}>{linkLocalReferences(children, workspace)}</ReactMarkdown>;
 }
 
 export function messageText(message: any): string {

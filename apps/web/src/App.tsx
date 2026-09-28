@@ -283,7 +283,7 @@ export default function App() {
 
           <section className="messages">
             {messages.map((message, index) => <article className={`message ${message.role ?? "system"}`} key={message.id ?? index}>
-              <div className="role">{message.role ?? message.type}</div><Markdown>{messageText(message)}</Markdown>
+              <div className="role">{message.role ?? message.type}</div><Markdown workspace={selected.workspace}>{messageText(message)}</Markdown>
             </article>)}
             {liveEvents.filter((event) => event.type.includes("tool_execution")).map((event) => <article className="tool-event" key={event.seq}>
               <div><code>{event.type.replace("pi.", "")}</code><span>{String((event.payload as any)?.toolName ?? "")}</span></div>
@@ -293,10 +293,10 @@ export default function App() {
               <div className="role">assistant · streaming{liveUsage?.totalTokens ? ` · ${liveUsage.totalTokens} tokens` : ""}</div>
               {Object.entries(liveBlocks).sort(([left], [right]) => Number(left) - Number(right)).map(([index, block]) =>
                 block.type === "thinking"
-                  ? <details className="reasoning" open key={index}><summary>Reasoning</summary><Markdown>{block.content}</Markdown></details>
+                  ? <details className="reasoning" open key={index}><summary>Reasoning</summary><Markdown workspace={selected.workspace}>{block.content}</Markdown></details>
                   : block.type === "toolcall"
                     ? <div className="live-tool" key={index}><strong>Tool: {block.toolName ?? "pending"}</strong><pre>{block.content}</pre></div>
-                    : <Markdown key={index}>{block.content}</Markdown>)}
+                    : <Markdown workspace={selected.workspace} key={index}>{block.content}</Markdown>)}
             </article>}
             <div ref={endRef} />
           </section>
