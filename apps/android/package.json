@@ -1,0 +1,10 @@
+{
+  "name": "@pi-local/android",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "./gradlew --no-daemon assembleRelease",
+    "test": "./gradlew --no-daemon test",
+    "install:device": "../../scripts/build-install-android.py"
+  }
+}
