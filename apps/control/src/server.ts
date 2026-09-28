@@ -4,6 +4,8 @@ import { networkInterfaces } from "node:os";
 import { spawn } from "node:child_process";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import fastifyStatic from "@fastify/static";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import websocket from "@fastify/websocket";
 import type { PairingRequest, SessionCommand, UserAnswer } from "@pi-local/protocol";
 import { loadSnippets } from "@pi-local/prompt-snippets";
@@ -32,6 +34,8 @@ function requireAuth(store: StateStore, request: FastifyRequest): void {
 export async function buildServer(deps: Dependencies): Promise<FastifyInstance> {
   const { config, store, events, notifier, interactions, engine } = deps;
   const app = Fastify({ logger: { level: process.env.PI_WEB_LOG_LEVEL ?? "info" }, bodyLimit: 12 * 1024 * 1024 });
+  await app.register(swagger, { openapi: { info: { title: "Pi Local Control API", version: "0.1.0" } } });
+  await app.register(swaggerUi, { routePrefix: "/api/docs" });
   await app.register(websocket);
 
   app.setErrorHandler((error: any, _request, reply) => {
@@ -56,6 +60,7 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
     version: "0.1.0",
   }));
   app.get("/api/v1/config", async () => ({ workspaceRoot: config.workspaceRoot, port: config.port }));
+  app.get("/api/v1/openapi.json", async () => app.swagger());
   app.get("/api/v1/snippets", async () => loadSnippets(config.snippetsDir));
 
   app.post("/api/v1/auth/exchange", async (request: any, reply) => {
@@ -111,6 +116,12 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   app.post("/api/v1/sessions/:id/commands", async (request: any) => {
     const result = await engine.execute(request.params.id, request.body as SessionCommand);
     return { result: result ?? null };
+  });
+
+  app.get("/api/v1/events/:seq", async (request: any, reply) => {
+    const seq = Number.parseInt(request.params.seq, 10);
+    const event = Number.isInteger(seq) ? store.event(seq) : undefined;
+    return event ?? reply.code(404).send({ error: "Event not found" });
   });
 
   app.get("/api/v1/questions", async (request: any) => store.questions(request.query?.status));

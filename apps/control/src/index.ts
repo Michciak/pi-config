@@ -18,7 +18,7 @@ const engine = new EngineManager(config, store, events, interactions);
 const app = await buildServer({ config, store, events, notifier, interactions, engine });
 
 const unsubscribeNotifications = events.subscribe((event) => {
-  if (event.type === "engine.status_changed") void notifier.send(event.type, String(event.seq));
+  if (event.type === "engine.status_changed") void notifier.send(String(event.seq));
 });
 
 async function shutdown(signal: string): Promise<void> {

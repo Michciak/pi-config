@@ -62,7 +62,7 @@ export class InteractionBroker {
     this.store.createQuestion(question);
     if (resolver) this.questionResolvers.set(question.id, resolver);
     const event = this.events.publish("user_question.created", question, question.sessionId);
-    void this.notifier.send(event.type, question.id, { sessionId: question.sessionId });
+    void this.notifier.send(String(event.seq));
     return question;
   }
 
@@ -106,7 +106,7 @@ export class InteractionBroker {
     this.store.createApproval(approval);
     this.approvalResolvers.set(approval.id, args.responder);
     const event = this.events.publish("approval.created", approval, approval.sessionId);
-    void this.notifier.send(event.type, approval.id, { sessionId: approval.sessionId });
+    void this.notifier.send(String(event.seq));
     return approval;
   }
 

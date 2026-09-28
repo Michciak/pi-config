@@ -30,15 +30,15 @@ export class FirebaseNotifier {
 
   status(): "enabled" | "disabled" | "error" { return this.state; }
 
-  async send(type: string, eventId: string, extra: Record<string, string> = {}): Promise<void> {
+  async send(eventId: string): Promise<void> {
     if (!this.app || this.state !== "enabled") return;
     const tokens = this.store.devices().map((row) => row.fcm_token).filter((value): value is string => !!value);
     if (tokens.length === 0) return;
     try {
       const result = await getMessaging(this.app).sendEachForMulticast({
         tokens,
-        data: { type, eventId, serverId: this.store.serverId, ...extra },
-        android: { priority: type === "approval.created" || type === "user_question.created" ? "high" : "normal" },
+        data: { eventId },
+        android: { priority: "high" },
       });
       result.responses.forEach((response, index) => {
         if (!response.success && /registration-token-not-registered|invalid-registration-token/i.test(response.error?.code ?? "")) {

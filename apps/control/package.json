@@ -14,6 +14,8 @@
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.87.1",
     "@fastify/static": "^8.3.0",
+    "@fastify/swagger": "^9.6.1",
+    "@fastify/swagger-ui": "^5.2.3",
     "@fastify/websocket": "^11.2.0",
     "@pi-local/protocol": "0.1.0",
     "@pi-local/prompt-snippets": "0.1.0",

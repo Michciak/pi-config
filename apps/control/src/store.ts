@@ -78,6 +78,10 @@ export class StateStore {
     }));
   }
 
+  event(seq: number): PiEvent | undefined {
+    return this.eventsAfter(seq - 1, 1).find((item) => item.seq === seq);
+  }
+
   upsertSession(session: SessionSummary): void {
     this.db.prepare(`INSERT INTO sessions(id,name,workspace,status,session_file,created_at,updated_at)
       VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, workspace=excluded.workspace,
