@@ -38,6 +38,7 @@ export default function App() {
   const endRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<string | undefined>(undefined);
   const selected = status?.sessions.find((session) => session.id === selectedId);
+  const interactionTarget = new URLSearchParams(location.search).get("interaction");
 
   useEffect(() => { selectedRef.current = selectedId; }, [selectedId]);
 
@@ -86,6 +87,9 @@ export default function App() {
   }, []);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, events]);
+  useEffect(() => {
+    if (interactionTarget) document.getElementById(`interaction-${interactionTarget}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [questions, approvals, interactionTarget]);
 
   const liveEvents = useMemo(() => events.filter((event) => event.sessionId === selectedId).slice(-50), [events, selectedId]);
   const extensionUi = useMemo(() => {
@@ -100,8 +104,10 @@ export default function App() {
     }
     return { statuses: [...statuses], widgets: [...widgets], notices: notices.slice(-5) };
   }, [events, selectedId]);
-  const pendingQuestions = questions.filter((item) => item.status === "pending");
-  const pendingApprovals = approvals.filter((item) => item.status === "pending");
+  const targetFirst = <T extends { id: string }>(items: T[]) => [...items].sort((left, right) =>
+    left.id === interactionTarget ? -1 : right.id === interactionTarget ? 1 : 0);
+  const pendingQuestions = targetFirst(questions.filter((item) => item.status === "pending"));
+  const pendingApprovals = targetFirst(approvals.filter((item) => item.status === "pending"));
 
   async function engineAction(action: "start" | "stop" | "restart") {
     try { await controlApi.engine(action); await refresh(); } catch (cause) { setError(String(cause)); }
@@ -275,7 +281,7 @@ export default function App() {
 
       <aside className="interaction-panel">
         <h2>Wymaga uwagi <span>{pendingQuestions.length + pendingApprovals.length}</span></h2>
-        {pendingApprovals.map((approval) => <article className="interaction approval" key={approval.id}>
+        {pendingApprovals.map((approval) => <article id={`interaction-${approval.id}`} className="interaction approval" key={approval.id}>
           <div className="interaction-tag">ZATWIERDZENIE</div><h3>{approval.title}</h3><pre>{approval.message}</pre>
           <div className="interaction-actions"><button className="danger ghost" onClick={() => controlApi.decideApproval(approval.id, false).then(refresh)}>Odrzuć</button>
             <button onClick={() => controlApi.decideApproval(approval.id, true).then(refresh)}>Zatwierdź</button></div>

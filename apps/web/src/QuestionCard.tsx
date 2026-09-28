@@ -42,7 +42,7 @@ export function QuestionCard(props: {
   const valid = question.mode === "text"
     || (selected.length > 0 && (!selected.includes("other") || other.trim().length > 0));
 
-  return <article className="interaction question-card">
+  return <article id={`interaction-${question.id}`} className="interaction question-card">
     <div className="interaction-tag">PYTANIE · {question.source.name ?? question.source.kind}</div>
     <h3>{question.question}</h3>
     {question.details && <p className="details">{question.details}</p>}
