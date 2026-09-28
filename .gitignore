@@ -4,6 +4,15 @@
 .env
 .env.*
 node_modules/
+dist/
+.vite/
+.coverage/
+apps/web/public/runtime-config.js
+apps/android/app/google-services.json
+apps/android/*.jks
+apps/android/*.keystore
+*.apk
+*.aab
 .venv/
 *.log
 .DS_Store

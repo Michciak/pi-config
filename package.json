@@ -2,7 +2,19 @@
   "name": "pi-config-local",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Versioned local Pi configuration for macOS",
+  "workspaces": [
+    "apps/control",
+    "apps/web",
+    "packages/protocol"
+  ],
+  "scripts": {
+    "build": "npm run build -w @pi-local/protocol && npm run build -w @pi-local/web && npm run build -w @pi-local/control",
+    "dev": "npm run dev -w @pi-local/control",
+    "test": "npm run test -w @pi-local/protocol && npm run test -w @pi-local/control && npm run test -w @pi-local/web && node --test tests/*.test.mjs tests/router/*.test.mjs",
+    "typecheck": "npm run typecheck -w @pi-local/protocol && npm run typecheck -w @pi-local/control && npm run typecheck -w @pi-local/web"
+  },
   "keywords": [
     "pi-package"
   ],
@@ -14,5 +26,8 @@
     "skills": [
       "./skills/*"
     ]
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
