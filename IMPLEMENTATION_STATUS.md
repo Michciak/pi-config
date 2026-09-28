@@ -32,9 +32,12 @@ subagents, signed Android/FCM client, LaunchAgent installer, Keychain helpers,
 diagnostics and backup tooling. These changes are committed in an isolated
 delivery clone and have not modified the live global Pi runtime.
 
-Pure contract, workspace containment, SQLite transition, event cursor and ECDSA
-replay tests pass on Node 26. Broker/API tests and Playwright desktop/mobile
-flows are included. Full npm, Playwright, Android and S24/Watch 7 acceptance
+Forty-nine executable tests pass on Node 26, covering the existing Pi setup,
+question contracts, broker ordering, SQLite transitions, event cursors,
+workspace containment, streaming reconstruction, file links and ECDSA replay.
+A direct Pi 0.87.1 `RpcClient` smoke test also opened a session and completed an
+`extension_ui_request` response. API/Fastify tests and Playwright desktop/mobile
+flows are included. Full npm, API, Playwright, Android and S24/Watch 7 acceptance
 still require dependency downloads plus the user's Firebase files and devices;
 the current sandbox cannot resolve `registry.npmjs.org`.
 
