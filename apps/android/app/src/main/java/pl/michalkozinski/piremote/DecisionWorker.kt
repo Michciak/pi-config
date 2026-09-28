@@ -1,6 +1,7 @@
 package pl.michalkozinski.piremote
 
 import android.content.Context
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 
@@ -11,11 +12,16 @@ class DecisionWorker(context: Context, params: WorkerParameters) : Worker(contex
         return runCatching {
             ApiClient(applicationContext).post("/api/v1/approvals/$id/decision", mapOf("decision" to decision))
         }.fold(
-            onSuccess = { Result.success() },
+            onSuccess = { finishNotification(id) },
             onFailure = { failure ->
-                if (failure is ApiException && failure.statusCode == 409) Result.success()
+                if (failure is ApiException && failure.statusCode == 409) finishNotification(id)
                 else if (runAttemptCount < 3) Result.retry() else Result.failure()
             },
         )
+    }
+
+    private fun finishNotification(id: String): Result {
+        NotificationManagerCompat.from(applicationContext).cancel(id.hashCode())
+        return Result.success()
     }
 }

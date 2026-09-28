@@ -47,6 +47,7 @@ object Notifications {
             }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val open = PendingIntent.getActivity(context, id.hashCode(), Intent(context, MainActivity::class.java).apply {
             putExtra(EXTRA_OPEN_WEB, true)
+            putExtra(EXTRA_INTERACTION_ID, id)
         }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         notify(context, id, NotificationCompat.Builder(context, ATTENTION_CHANNEL)
             .setSmallIcon(R.drawable.ic_pi)
