@@ -3,7 +3,7 @@ import test from "node:test";
 import { mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveFileUnderWorkspace, resolveWorkspace } from "../src/workspace.ts";
+import { resolveFileUnderWorkspace, resolveOutputUnderWorkspace, resolveWorkspace } from "../src/workspace.ts";
 
 test("accepts real paths below the configured root", () => {
   const temp = mkdtempSync(join(tmpdir(), "pi-workspace-"));
@@ -25,4 +25,12 @@ test("rejects traversal and symlinks that leave the configured root", () => {
   assert.throws(() => resolveWorkspace(root, outside), /outside/i);
   assert.throws(() => resolveWorkspace(root, join(root, "escape")), /outside/i);
   assert.throws(() => resolveFileUnderWorkspace(root, join(root, "escape", "secret.txt")), /outside/i);
+});
+
+test("allows new export files only below a canonical workspace parent", () => {
+  const root = mkdtempSync(join(tmpdir(), "pi-workspace-output-"));
+  const nested = join(root, "nested");
+  mkdirSync(nested);
+  assert.equal(resolveOutputUnderWorkspace(root, join(nested, "session.html")), join(realpathSync(nested), "session.html"));
+  assert.throws(() => resolveOutputUnderWorkspace(root, join(root, "..", "escape.html")), /outside/i);
 });

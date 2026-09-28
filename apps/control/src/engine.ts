@@ -10,7 +10,7 @@ import type { ControlConfig } from "./config.js";
 import { EventBus } from "./events.js";
 import { InteractionBroker } from "./interactions.js";
 import { StateStore } from "./store.js";
-import { resolveWorkspace } from "./workspace.js";
+import { resolveOutputUnderWorkspace, resolveWorkspace } from "./workspace.js";
 
 interface RuntimeSession {
   summary: SessionSummary;
@@ -141,9 +141,24 @@ export class EngineManager {
       case "bash": return client.bash(String(payload.command ?? ""));
       case "abort_bash": return client.abortBash();
       case "get_session_stats": return client.getSessionStats();
-      case "export_html": return client.exportHtml();
-      case "fork": return client.fork(String(payload.entryId ?? ""));
-      case "clone": return client.clone();
+      case "export_html": return client.exportHtml(payload.outputPath
+        ? resolveOutputUnderWorkspace(runtime.summary.workspace, String(payload.outputPath)) : undefined);
+      case "switch_session": {
+        const sessionPath = this.resolveOwnedSession(String(payload.sessionPath ?? ""));
+        const result = await client.switchSession(sessionPath);
+        await this.refreshRuntimeSession(runtime);
+        return result;
+      }
+      case "fork": {
+        const result = await client.fork(String(payload.entryId ?? ""));
+        await this.refreshRuntimeSession(runtime);
+        return result;
+      }
+      case "clone": {
+        const result = await client.clone();
+        await this.refreshRuntimeSession(runtime);
+        return result;
+      }
       case "get_fork_messages": return client.getForkMessages();
       case "get_entries": return client.getEntries(payload.since as string | undefined);
       case "get_tree": return client.getTree();
@@ -157,7 +172,11 @@ export class EngineManager {
         return null;
       }
       case "get_commands": return client.getCommands();
-      case "new_session": return client.newSession(payload.parentSession as string | undefined);
+      case "new_session": {
+        const result = await client.newSession(payload.parentSession as string | undefined);
+        await this.refreshRuntimeSession(runtime);
+        return result;
+      }
       default: throw Object.assign(new Error(`Unsupported session command: ${request.command}`), { statusCode: 400 });
     }
   }
@@ -255,6 +274,25 @@ export class EngineManager {
     summary.updatedAt = now();
     this.store.upsertSession(summary);
     this.events.publish("session.status_changed", summary, id);
+  }
+
+  private resolveOwnedSession(requested: string): string {
+    if (!requested) throw Object.assign(new Error("Session path is required"), { statusCode: 400 });
+    const root = realpathSync(this.config.sessionsDir);
+    const candidate = realpathSync(requested);
+    const rel = relative(root, candidate);
+    if (rel.startsWith("..") || rel.startsWith("/") || !candidate.endsWith(".jsonl")) {
+      throw Object.assign(new Error("Only web-owned session files can be opened directly"), { statusCode: 400 });
+    }
+    return candidate;
+  }
+
+  private async refreshRuntimeSession(runtime: RuntimeSession): Promise<void> {
+    const state = await runtime.client.getState();
+    runtime.summary.sessionFile = state.sessionFile;
+    if (state.sessionName) runtime.summary.name = state.sessionName;
+    runtime.summary.updatedAt = now();
+    this.store.upsertSession(runtime.summary);
   }
 
   private setStatus(status: EngineStatus, extra: Record<string, unknown> = {}): void {
