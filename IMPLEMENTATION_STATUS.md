@@ -33,9 +33,10 @@ diagnostics and backup tooling. These changes are committed in an isolated
 delivery clone and have not modified the live global Pi runtime.
 
 Pure contract, workspace containment, SQLite transition, event cursor and ECDSA
-replay tests pass on Node 26. Full npm, Playwright, Android and S24/Watch 7
-acceptance still require dependency downloads plus the user's Firebase files
-and devices; the current sandbox cannot resolve `registry.npmjs.org`.
+replay tests pass on Node 26. Broker/API tests and Playwright desktop/mobile
+flows are included. Full npm, Playwright, Android and S24/Watch 7 acceptance
+still require dependency downloads plus the user's Firebase files and devices;
+the current sandbox cannot resolve `registry.npmjs.org`.
 
 | Plan stage | Status | Result |
 |---|---|---|
@@ -74,9 +75,9 @@ settings, model cache, scope, or sessions.
 
 ## Next stage
 
-Deploy the workspace delivery commits and validate a real `/route` task inside
-Warp/tmux. Then implement provider failure classification and quota adapters.
-Memory and MCP remain unimplemented; no local LLM work is planned.
+Deploy the web-control delivery commits, run the non-generating RPC smoke test,
+then complete the Firebase, S24 and Watch 7 acceptance checklist. Memory, MCP,
+provider quota adapters and local LLMs remain outside this delivery.
 
 ## Failure/recovery fixture
 

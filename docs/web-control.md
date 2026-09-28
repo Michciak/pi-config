@@ -101,9 +101,13 @@ allowlist.
 
 ```sh
 ./scripts/diagnose-web-control.sh
+./scripts/acceptance-web-control.py
 ./scripts/backup-web-control.sh
 ./scripts/uninstall-web-control.sh
 ```
+
+The complete automated and device acceptance procedure is in
+[`web-control-acceptance.md`](web-control-acceptance.md).
 
 API documentation is available locally at `/api/docs`; the JSON document is at
 `/api/v1/openapi.json`. WebSocket clients reconnect to `/api/v1/events?after=N`
