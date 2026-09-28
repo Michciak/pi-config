@@ -74,6 +74,7 @@ export default function App() {
 
   useEffect(() => {
     let disconnect = () => {};
+    let connectedOnce = false;
     void (async () => {
       try {
         await exchangeHashToken();
@@ -103,7 +104,14 @@ export default function App() {
             if (event.type === "pi.message_end") { setLiveBlocks({}); setLiveUsage(undefined); }
             void loadSession(event.sessionId);
           }
-        }, setConnected);
+        }, (isConnected) => {
+          setConnected(isConnected);
+          if (isConnected && connectedOnce && selectedRef.current) {
+            setLiveBlocks({}); setLiveUsage(undefined);
+            void loadSession(selectedRef.current);
+          }
+          if (isConnected) connectedOnce = true;
+        });
       } catch (cause) { setError(String(cause)); }
     })();
     return () => disconnect();
