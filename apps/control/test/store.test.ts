@@ -62,3 +62,28 @@ test("marks resumable sessions interrupted when Control Service restarts", () =>
   try { assert.equal(reopened.session("idle")?.status, "interrupted"); }
   finally { reopened.close(); }
 });
+
+test("deletes a session and its associated control records", () => {
+  const state = store();
+  const timestamp = new Date(0).toISOString();
+  try {
+    state.upsertSession({ id: "deleted", name: "Deleted", workspace: "/workspace", status: "idle",
+      createdAt: timestamp, updatedAt: timestamp });
+    state.upsertSession({ id: "kept", name: "Kept", workspace: "/workspace", status: "idle",
+      createdAt: timestamp, updatedAt: timestamp });
+    state.createQuestion({ id: "question", sessionId: "deleted", source: { kind: "orchestrator" }, question: "Q",
+      mode: "text", options: [], allowOther: false, status: "pending", answers: [], createdAt: timestamp });
+    state.createApproval({ id: "approval", sessionId: "deleted", title: "Run?", message: "command",
+      status: "pending", createdAt: timestamp });
+    state.appendEvent("session.test", { value: 1 }, "deleted");
+    state.appendEvent("session.test", { value: 2 }, "kept");
+
+    assert.equal(state.deleteSession("deleted"), true);
+    assert.equal(state.session("deleted"), undefined);
+    assert.equal(state.question("question"), undefined);
+    assert.equal(state.approval("approval"), undefined);
+    assert.deepEqual(state.eventsAfter(0).map((event) => event.sessionId), ["kept"]);
+    assert.equal(state.session("kept")?.name, "Kept");
+    assert.equal(state.deleteSession("deleted"), false);
+  } finally { state.close(); }
+});

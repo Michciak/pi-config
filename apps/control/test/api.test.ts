@@ -14,7 +14,8 @@ test("serves OpenAPI and applies exactly-once question responses", async () => {
   const events = new EventBus(store);
   const notifier = { status: () => "disabled", send: async () => {} } as any;
   const interactions = new InteractionBroker(store, events, notifier);
-  const engine = { status: () => "stopped", sessions: () => [] } as any;
+  let deletedId: string | undefined;
+  const engine = { status: () => "stopped", sessions: () => [], deleteSession: async (id: string) => { deletedId = id; } } as any;
   const config = { host: "127.0.0.1", port: 3784, runtimeDir: directory,
     databasePath: join(directory, "state.sqlite"), socketPath: join(directory, "socket"),
     sessionsDir: join(directory, "sessions"), workspaceRoot: directory,
@@ -32,5 +33,8 @@ test("serves OpenAPI and applies exactly-once question responses", async () => {
       payload: { answers: [{ type: "text", label: "late", value: "late" }] } });
     assert.equal(first.statusCode, 200);
     assert.equal(second.statusCode, 409);
+    const deleted = await app.inject({ method: "DELETE", url: "/api/v1/sessions/session-1", headers: { host: "127.0.0.1:3784" } });
+    assert.equal(deleted.statusCode, 204);
+    assert.equal(deletedId, "session-1");
   } finally { await app.close(); store.close(); }
 });

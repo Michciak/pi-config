@@ -125,6 +125,47 @@ test("resumes a stopped RPC session and applies a model selection", async ({ pag
   await expect(picker).toHaveValue("openrouter/anthropic/claude-sonnet-4");
 });
 
+test("shows a newly created session immediately and allows deleting it", async ({ page }) => {
+  const session = {
+    id: "new-session", name: "New project", workspace: "/Dropbox/NETRIX/new-project",
+    status: "idle", createdAt: now, updatedAt: now,
+  };
+  let deleted = false;
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/v1/config") return route.fulfill({ json: { workspaceRoot: session.workspace } });
+    if (path === "/api/v1/snippets" || path === "/api/v1/questions" || path === "/api/v1/approvals") return route.fulfill({ json: [] });
+    if (path === "/api/v1/status") return route.fulfill({ json: {
+      serverId: "test", control: "online", engine: "running", sessions: [], firebase: "disabled", version: "test",
+    } });
+    if (path === "/api/v1/sessions" && request.method() === "POST") return route.fulfill({ status: 201, json: session });
+    if (path === "/api/v1/sessions/new-session" && request.method() === "DELETE") {
+      deleted = true;
+      return route.fulfill({ status: 204, body: "" });
+    }
+    if (path === "/api/v1/sessions/new-session/commands") {
+      const command = request.postDataJSON().command;
+      if (command === "get_messages" || command === "get_commands" || command === "get_available_models") return route.fulfill({ json: { result: [] } });
+      if (command === "get_state") return route.fulfill({ json: { result: { thinkingLevel: "medium" } } });
+    }
+    return route.fulfill({ status: 404, json: { error: `Unhandled ${request.method()} ${path}` } });
+  });
+
+  await page.goto("/");
+  await page.getByPlaceholder("Nazwa sesji").fill(session.name);
+  await page.getByRole("button", { name: /Nowa sesja/ }).click();
+  await expect(page.getByRole("heading", { name: session.name })).toBeVisible();
+  await expect(page.getByRole("button", { name: `Usuń sesję ${session.name}` })).toBeVisible();
+
+  await page.getByRole("button", { name: `Usuń sesję ${session.name}` }).click();
+  await expect(page.getByRole("dialog")).toContainText(session.name);
+  await page.getByRole("button", { name: "Usuń sesję", exact: true }).click();
+  await expect.poll(() => deleted).toBe(true);
+  await expect(page.getByRole("heading", { name: session.name })).toHaveCount(0);
+});
+
 test("mobile deep link brings the requested interaction into view", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("mobile"), "mobile layout assertion");
   await mockControl(page);

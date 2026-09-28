@@ -53,3 +53,16 @@ test("engine restart invalidates questions and approvals", () => {
     assert.equal(store.approval(approval.id)?.status, "invalidated");
   } finally { store.close(); }
 });
+
+test("session deletion invalidates only that session's pending interactions", () => {
+  const { store, broker } = setup();
+  try {
+    const removed = textQuestion(broker, "removed", "Removed");
+    const kept = textQuestion(broker, "kept", "Kept");
+    const approval = broker.createApproval({ sessionId: "removed", externalRequestId: "rpc-2", title: "Run?", message: "rm", responder: () => {} });
+    broker.invalidateSession("removed", "Session deleted");
+    assert.equal(store.question(removed.id)?.status, "invalidated");
+    assert.equal(store.approval(approval.id)?.status, "invalidated");
+    assert.equal(store.question(kept.id)?.status, "pending");
+  } finally { store.close(); }
+});

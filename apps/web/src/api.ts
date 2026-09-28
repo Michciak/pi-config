@@ -47,6 +47,7 @@ export const controlApi = {
   importSession: (sourcePath: string, workspace: string, name: string) => api<SessionSummary>("/sessions/import", { method: "POST", body: JSON.stringify({ sourcePath, workspace, name }) }),
   resumeSession: (id: string) => api<SessionSummary>(`/sessions/${id}/resume`, { method: "POST" }),
   stopSession: (id: string) => api(`/sessions/${id}/stop`, { method: "POST" }),
+  deleteSession: (id: string) => api<void>(`/sessions/${id}`, { method: "DELETE" }),
   command: <T = unknown>(id: string, command: string, payload: Record<string, unknown> = {}) =>
     api<{ result: T }>(`/sessions/${id}/commands`, { method: "POST", body: JSON.stringify({ command, payload } satisfies SessionCommand) }).then((value) => value.result),
   questions: () => api<UserQuestion[]>("/questions"),

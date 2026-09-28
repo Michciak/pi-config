@@ -127,6 +127,10 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   });
   app.post("/api/v1/sessions/:id/resume", async (request: any) => engine.resumeSession(request.params.id));
   app.post("/api/v1/sessions/:id/stop", async (request: any) => { await engine.stopSession(request.params.id, true); return { stopped: true }; });
+  app.delete("/api/v1/sessions/:id", async (request: any, reply) => {
+    await engine.deleteSession(request.params.id);
+    return reply.code(204).send();
+  });
   app.post("/api/v1/sessions/:id/commands", async (request: any) => {
     const result = await engine.execute(request.params.id, request.body as SessionCommand);
     return { result: result ?? null };

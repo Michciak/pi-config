@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, realpathSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, realpathSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -97,6 +97,18 @@ export class EngineManager {
     await runtime.client.stop();
     this.running.delete(id);
     this.updateSession(id, interrupted ? "interrupted" : "idle");
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    const summary = this.store.session(id);
+    if (!summary) throw Object.assign(new Error("Session not found"), { statusCode: 404 });
+    this.interactions.invalidateSession(id, "Session deleted");
+    await this.stopSession(id);
+    if (summary.sessionFile && existsSync(summary.sessionFile)) {
+      unlinkSync(this.resolveOwnedSession(summary.sessionFile));
+    }
+    if (!this.store.deleteSession(id)) throw Object.assign(new Error("Session not found"), { statusCode: 404 });
+    this.events.publish("session.deleted", { id, name: summary.name }, id);
   }
 
   async importTerminalSession(sourcePath: string, workspace: string, name?: string): Promise<SessionSummary> {

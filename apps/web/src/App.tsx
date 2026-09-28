@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import type { Approval, PiEvent, ServerStatus, UserQuestion } from "@pi-local/protocol";
+import type { Approval, PiEvent, ServerStatus, SessionSummary, UserQuestion } from "@pi-local/protocol";
 import type { PromptSnippet } from "@pi-local/prompt-snippets";
 import { ApiError, connectEvents, controlApi, exchangeHashToken } from "./api.js";
 import { Markdown, messageText } from "./Markdown.js";
@@ -39,6 +39,7 @@ export default function App() {
   const [inspection, setInspection] = useState<any>();
   const [error, setError] = useState("");
   const [pairing, setPairing] = useState<{ code: string; expiresAt: number; host: string; deepLink: string }>();
+  const [deleteTarget, setDeleteTarget] = useState<SessionSummary>();
   const endRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<string | undefined>(undefined);
   const selected = status?.sessions.find((session) => session.id === selectedId);
@@ -53,6 +54,20 @@ export default function App() {
     setStatus(nextStatus);
     setQuestions(nextQuestions);
     setApprovals(nextApprovals);
+  }
+
+  function showSession(session: SessionSummary) {
+    setStatus((current) => current ? {
+      ...current,
+      sessions: [session, ...current.sessions.filter((item) => item.id !== session.id)],
+    } : current);
+  }
+
+  function clearSessionView() {
+    selectedRef.current = undefined;
+    setSelectedId(undefined);
+    setMessages([]); setSessionState(undefined); setModels([]); setCommands([]);
+    setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
   }
 
   async function readSession(id: string) {
@@ -103,7 +118,7 @@ export default function App() {
         await refresh();
         disconnect = connectEvents(0, (event) => {
           setEvents((current) => [...current.slice(-499), event]);
-          if (event.type === "engine.status_changed" || event.type === "session.status_changed") void refresh();
+          if (event.type === "engine.status_changed" || event.type.startsWith("session.")) void refresh();
           if (event.type.startsWith("user_question.") || event.type.startsWith("approval.")) void refresh();
           if (event.type === "ui.setTitle" && typeof (event.payload as any)?.title === "string") document.title = (event.payload as any).title;
           if (event.type === "ui.set_editor_text" && event.sessionId === selectedRef.current) setComposer(String((event.payload as any)?.text ?? ""));
@@ -170,7 +185,7 @@ export default function App() {
   async function createSession() {
     try {
       const session = await controlApi.createSession(workspace, sessionName);
-      await refresh(); await loadSession(session.id); setSessionName("");
+      showSession(session); setSessionName(""); await loadSession(session.id);
     } catch (cause) { setError(String(cause)); }
   }
 
@@ -178,7 +193,20 @@ export default function App() {
     if (!importPath.trim()) return;
     try {
       const session = await controlApi.importSession(importPath, workspace, sessionName);
-      setImportPath(""); setSessionName(""); await refresh(); await loadSession(session.id);
+      setImportPath(""); setSessionName(""); showSession(session); await loadSession(session.id);
+    } catch (cause) { setError(String(cause)); }
+  }
+
+  async function deleteSession() {
+    if (!deleteTarget) return;
+    const session = deleteTarget;
+    try {
+      await controlApi.deleteSession(session.id);
+      setStatus((current) => current ? { ...current, sessions: current.sessions.filter((item) => item.id !== session.id) } : current);
+      if (selectedRef.current === session.id) clearSessionView();
+      setDeleteTarget(undefined);
+      setError("");
+      await refresh();
     } catch (cause) { setError(String(cause)); }
   }
 
@@ -224,7 +252,7 @@ export default function App() {
 
   return <div className="app-shell">
     <header>
-      <div><span className="logo">π</span><strong>Pi Remote</strong></div>
+      <div className="brand"><span className="logo">π</span><span className="brand-copy"><strong>Pi Remote</strong><small>Local AI workspace</small></span></div>
       <div className="status-row">
         <span className={`dot ${connected ? "ok" : "bad"}`} />Control
         <span className={`pill ${status?.engine}`}>{status?.engine ?? "offline"}</span>
@@ -248,29 +276,42 @@ export default function App() {
         <a href={pairing.deepLink}>Otwórz w Pi Remote</a>
       </section>
     </div>}
+    {deleteTarget && <div className="modal-backdrop" onClick={() => setDeleteTarget(undefined)}>
+      <section className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-session-title" onClick={(event) => event.stopPropagation()}>
+        <div className="confirm-icon">×</div>
+        <span className="eyebrow">DELETE SESSION</span>
+        <h2 id="delete-session-title">Usunąć „{deleteTarget.name}”?</h2>
+        <p>Sesja i jej lokalna kopia rozmowy zostaną usunięte. Tej operacji nie można cofnąć.</p>
+        <div className="confirm-actions">
+          <button className="ghost" onClick={() => setDeleteTarget(undefined)}>Anuluj</button>
+          <button className="danger solid" onClick={() => void deleteSession()}>Usuń sesję</button>
+        </div>
+      </section>
+    </div>}
     <div className="layout">
       <aside className="sessions-panel">
-        <h2>Sesje</h2>
+        <div className="panel-heading"><div><span>WORKSPACE</span><h2>Sesje</h2></div><b>{status?.sessions.length ?? 0}</b></div>
         <div className="new-session">
           <input value={workspace} onChange={(event) => setWorkspace(event.target.value)} placeholder={workspaceRoot} />
           <input value={sessionName} onChange={(event) => setSessionName(event.target.value)} placeholder="Nazwa sesji" />
-          <button onClick={createSession} disabled={status?.engine !== "running"}>Nowa sesja</button>
+          <button onClick={createSession} disabled={status?.engine !== "running"}>＋ Nowa sesja</button>
           <details className="import-session"><summary>Import kopii sesji terminalowej</summary>
             <input value={importPath} onChange={(event) => setImportPath(event.target.value)} placeholder="~/.pi/agent/sessions/…jsonl" />
             <button className="ghost" onClick={importSession} disabled={status?.engine !== "running"}>Importuj kopię</button>
           </details>
         </div>
-        <nav>{status?.sessions.map((session) => <button key={session.id}
-          className={`session-row ${selectedId === session.id ? "active" : ""}`}
-          onClick={() => void loadSession(session.id)}>
-          <span>{session.name}</span><small><i className={`session-dot ${session.status}`} />{session.status}</small>
-        </button>)}</nav>
+        <nav>{status?.sessions.map((session) => <div className={`session-item ${selectedId === session.id ? "active" : ""}`} key={session.id}>
+          <button className="session-row" onClick={() => void loadSession(session.id)}>
+            <span>{session.name}</span><small><i className={`session-dot ${session.status}`} />{session.status}</small>
+          </button>
+          <button className="session-delete" aria-label={`Usuń sesję ${session.name}`} title="Usuń sesję" onClick={() => setDeleteTarget(session)}>×</button>
+        </div>)}</nav>
       </aside>
 
       <main className="conversation">
         {selected ? <>
           <div className="conversation-head">
-            <div><h1>{selected.name}</h1><p>{selected.workspace}</p></div>
+            <div><span className="eyebrow">ACTIVE SESSION</span><h1>{selected.name}</h1><p>{selected.workspace}</p></div>
             <div className="model-controls">
               <select aria-label="Model" value={sessionState?.model ? `${sessionState.model.provider}/${sessionState.model.id}` : ""}
                 onChange={(event) => void changeModel(event.target.value)}>
@@ -350,11 +391,11 @@ export default function App() {
               <select value={delivery} onChange={(event) => setDelivery(event.target.value as any)}><option value="prompt">Prompt</option><option value="steer">Steer</option><option value="follow_up">Follow-up</option></select>
               <button className="danger ghost" onClick={() => inspect("abort")}>Przerwij</button><button onClick={send}>Wyślij ⌘↵</button></div>
           </section>
-        </> : <div className="empty"><span>π</span><h1>Wybierz lub utwórz sesję</h1><p>Pi Engine pozostaje wyłączony, dopóki go nie uruchomisz.</p></div>}
+        </> : <div className="empty"><span>π</span><div className="eyebrow">READY WHEN YOU ARE</div><h1>Wybierz lub utwórz sesję</h1><p>{status?.engine === "running" ? "Pi Engine działa. Otwórz sesję z panelu lub rozpocznij nową." : "Uruchom Pi Engine, aby rozpocząć pracę."}</p></div>}
       </main>
 
       <aside className="interaction-panel">
-        <h2>Wymaga uwagi <span>{pendingQuestions.length + pendingApprovals.length}</span></h2>
+        <div className="panel-heading attention-heading"><div><span>INBOX</span><h2>Wymaga uwagi</h2></div><b>{pendingQuestions.length + pendingApprovals.length}</b></div>
         {pendingApprovals.map((approval) => <article id={`interaction-${approval.id}`} className="interaction approval" key={approval.id}>
           <div className="interaction-tag">ZATWIERDZENIE</div><h3>{approval.title}</h3><pre>{approval.message}</pre>
           <div className="interaction-actions"><button className="danger ghost" onClick={() => controlApi.decideApproval(approval.id, false).then(refresh)}>Odrzuć</button>

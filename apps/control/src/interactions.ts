@@ -168,6 +168,21 @@ export class InteractionBroker {
     this.approvalResolvers.clear();
   }
 
+  invalidateSession(sessionId: string, reason: string): void {
+    for (const question of this.store.questions("pending").filter((item) => item.sessionId === sessionId)) {
+      this.store.resolveQuestion(question.id, "invalidated");
+      this.questionResolvers.get(question.id)?.({ status: "unavailable", answers: [], message: reason });
+      this.questionResolvers.delete(question.id);
+      this.events.publish("user_question.invalidated", { ...question, status: "invalidated", reason }, sessionId);
+    }
+    for (const approval of this.store.approvals("pending").filter((item) => item.sessionId === sessionId)) {
+      this.store.resolveApproval(approval.id, "invalidated");
+      this.approvalResolvers.get(approval.id)?.(false);
+      this.approvalResolvers.delete(approval.id);
+      this.events.publish("approval.resolved", { ...approval, status: "invalidated", reason }, sessionId);
+    }
+  }
+
   private handleSocket(socket: Socket): void {
     let buffer = "";
     let questionId: string | undefined;

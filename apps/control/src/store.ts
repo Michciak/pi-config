@@ -98,6 +98,21 @@ export class StateStore {
 
   session(id: string): SessionSummary | undefined { return this.sessions().find((item) => item.id === id); }
 
+  deleteSession(id: string): boolean {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.db.prepare("DELETE FROM questions WHERE session_id=?").run(id);
+      this.db.prepare("DELETE FROM approvals WHERE session_id=?").run(id);
+      this.db.prepare("DELETE FROM events WHERE session_id=?").run(id);
+      const removed = this.db.prepare("DELETE FROM sessions WHERE id=?").run(id).changes === 1;
+      this.db.exec("COMMIT");
+      return removed;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
   createQuestion(question: UserQuestion): void {
     this.db.prepare(`INSERT INTO questions(id,session_id,source,question,details,mode,options,allow_other,status,
       answers,external_request_id,created_at,resolved_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`)
