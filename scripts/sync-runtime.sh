@@ -15,7 +15,10 @@ for source in "$REPO_DIR"/agents/*.md; do compare "$source" "$PI_AGENT_DIR/agent
 compare "$REPO_DIR/extensions/cursor-subagents.ts" "$PI_AGENT_DIR/extensions/cursor-subagents.ts" || rc=1
 compare "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts" || rc=1
 compare "$REPO_DIR/extensions/file-links.ts" "$PI_AGENT_DIR/extensions/file-links.ts" || rc=1
-for relative in index.ts session.ts status.ts routing.ts; do
+compare "$REPO_DIR/extensions/ask-user-question.ts" "$PI_AGENT_DIR/extensions/ask-user-question.ts" || rc=1
+compare "$REPO_DIR/extensions/ask-user-question-contract.ts" "$PI_AGENT_DIR/extensions/ask-user-question-contract.ts" || rc=1
+compare "$REPO_DIR/extensions/bash-guard/index.ts" "$PI_AGENT_DIR/extensions/bash-guard/index.ts" || rc=1
+for relative in index.ts session.ts status.ts routing.ts rpc-backend.ts; do
   compare "$REPO_DIR/extensions/interactive-subagents/$relative" "$PI_AGENT_DIR/extensions/interactive-subagents/$relative" || rc=1
 done
 for source in "$REPO_DIR"/skills/*; do
@@ -35,8 +38,16 @@ if [[ "$MODE" == "apply" && "$rc" != 0 ]]; then
   cp "$REPO_DIR/extensions/model-router.ts" "$PI_AGENT_DIR/extensions/model-router.ts"
   [[ -e "$PI_AGENT_DIR/extensions/file-links.ts" ]] && cp "$PI_AGENT_DIR/extensions/file-links.ts" "$backup/file-links.ts"
   cp "$REPO_DIR/extensions/file-links.ts" "$PI_AGENT_DIR/extensions/file-links.ts"
+  for relative in ask-user-question.ts ask-user-question-contract.ts; do
+    target="$PI_AGENT_DIR/extensions/$relative"
+    [[ -e "$target" ]] && cp "$target" "$backup/$relative"
+    cp "$REPO_DIR/extensions/$relative" "$target"
+  done
+  mkdir -p "$backup/bash-guard" "$PI_AGENT_DIR/extensions/bash-guard"
+  [[ -e "$PI_AGENT_DIR/extensions/bash-guard/index.ts" ]] && cp "$PI_AGENT_DIR/extensions/bash-guard/index.ts" "$backup/bash-guard/index.ts"
+  cp "$REPO_DIR/extensions/bash-guard/index.ts" "$PI_AGENT_DIR/extensions/bash-guard/index.ts"
   mkdir -p "$backup/interactive-subagents" "$PI_AGENT_DIR/extensions/interactive-subagents"
-  for relative in index.ts session.ts status.ts routing.ts; do
+  for relative in index.ts session.ts status.ts routing.ts rpc-backend.ts; do
     target="$PI_AGENT_DIR/extensions/interactive-subagents/$relative"
     [[ -e "$target" ]] && cp "$target" "$backup/interactive-subagents/$relative"
     cp "$REPO_DIR/extensions/interactive-subagents/$relative" "$target"
