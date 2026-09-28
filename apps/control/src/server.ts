@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { networkInterfaces } from "node:os";
+import { hostname, networkInterfaces } from "node:os";
 import { spawn } from "node:child_process";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import fastifyStatic from "@fastify/static";
@@ -31,6 +31,8 @@ function requireAuth(store: StateStore, request: FastifyRequest): void {
   if (!authorized(store, request)) throw Object.assign(new Error("Authentication required"), { statusCode: 401 });
 }
 
+const pairingAttempts = new Map<string, number[]>();
+
 export async function buildServer(deps: Dependencies): Promise<FastifyInstance> {
   const { config, store, events, notifier, interactions, engine } = deps;
   const app = Fastify({ logger: { level: process.env.PI_WEB_LOG_LEVEL ?? "info" }, bodyLimit: 12 * 1024 * 1024 });
@@ -46,6 +48,13 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
 
   app.addHook("preHandler", async (request, reply) => {
     if (!request.url.startsWith("/api/v1/")) return;
+    if (!allowedHttpHost(request.hostname)) return reply.code(403).send({ error: "Untrusted Host header" });
+    const origin = request.headers.origin;
+    if (origin && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+      try {
+        if (new URL(origin).host !== request.headers.host) return reply.code(403).send({ error: "Cross-origin mutation rejected" });
+      } catch { return reply.code(403).send({ error: "Invalid Origin header" }); }
+    }
     const path = request.url.split("?")[0];
     const publicRoute = path === "/api/v1/auth/exchange" || path === "/api/v1/devices/pair";
     if (!publicRoute && !authorized(store, request)) return reply.code(401).send({ error: "Authentication required" });
@@ -84,10 +93,14 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   });
 
   app.post("/api/v1/devices/pair", async (request: any, reply) => {
+    const recent = (pairingAttempts.get(request.ip) ?? []).filter((timestamp) => timestamp > Date.now() - 5 * 60_000);
+    if (recent.length >= 10) return reply.code(429).send({ error: "Too many pairing attempts" });
+    recent.push(Date.now()); pairingAttempts.set(request.ip, recent);
     const body = request.body as PairingRequest;
     if (!body?.code || !body.deviceId || !body.name || !body.publicKey) return reply.code(400).send({ error: "Incomplete pairing request" });
     if (!store.consumePairingCode(body.code)) return reply.code(401).send({ error: "Invalid or expired pairing code" });
     store.upsertDevice({ id: body.deviceId, name: body.name, publicKey: body.publicKey, fcmToken: body.fcmToken });
+    pairingAttempts.delete(request.ip);
     events.publish("device.paired", { id: body.deviceId, name: body.name });
     return { paired: true, serverId: store.serverId };
   });
@@ -196,4 +209,15 @@ function lanAddress(): string {
     }
   }
   return "127.0.0.1";
+}
+
+function allowedHttpHost(hostWithPort: string): boolean {
+  const host = (hostWithPort.startsWith("[")
+    ? hostWithPort.slice(1, hostWithPort.indexOf("]"))
+    : hostWithPort.split(":")[0])?.toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+  const localName = hostname().toLowerCase();
+  if (host === localName || host === `${localName}.local` || host === localName.replace(/\.local$/, "")) return true;
+  return Object.values(networkInterfaces()).some((addresses) =>
+    (addresses ?? []).some((address) => !address.internal && address.address.toLowerCase() === host));
 }
