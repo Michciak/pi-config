@@ -161,3 +161,14 @@ If notifications show a configuration error, reimport with the corrected script.
 Finish active sessions before restarting Control Service, then send a test from
 Narzędzia sesji → Powiadomienia mobilne. FCM acceptance alone does not prove
 that Android displayed the notification.
+
+### Chat navigation and output
+
+Up/Down recalls prompts from the selected session. Up starts on the first line;
+Down after the newest recalled prompt restores the draft. While slash suggestions
+are visible, arrows select commands instead. Thinking is collapsed independently
+from model text, and tool calls/results have named disclosures. Replayed tool
+updates are grouped by call ID and hidden once the durable result is available.
+Scrolling away from the bottom pauses output following. Recognized source-file
+links open Rider on the Mac running Control Service; the server still enforces
+the configured workspace boundary. Failed opens are shown beside the message.

@@ -1,15 +1,17 @@
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import { useState } from "react";
 import { controlApi } from "./api.js";
 import { linkLocalReferences, localFilePath } from "./fileReferences.js";
 
 export function Markdown({ children, workspace }: { children: string; workspace?: string }) {
-  return <ReactMarkdown components={{
+  const [error, setError] = useState("");
+  return <><ReactMarkdown urlTransform={url => url.startsWith("file://") ? url : defaultUrlTransform(url)} components={{
     a({ href = "", children: label }) {
       const path = localFilePath(href, workspace);
-      if (path) return <button className="file-link" title={path} onClick={() => void controlApi.openRider(path)}>{label}</button>;
+      if (path) return <button className="file-link" title={path} onClick={() => { setError(""); void controlApi.openRider(path).catch(() => setError(`Nie udało się otworzyć w Riderze: ${path}`)); }}>{label}</button>;
       return <a href={href} target="_blank" rel="noreferrer">{label}</a>;
     },
-  }}>{linkLocalReferences(children, workspace)}</ReactMarkdown>;
+  }}>{linkLocalReferences(children, workspace)}</ReactMarkdown>{error && <p role="alert" className="file-error">{error}</p>}</>;
 }
 
 export function messageText(message: any): string {

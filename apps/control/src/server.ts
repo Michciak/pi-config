@@ -185,8 +185,11 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   });
   app.post("/api/v1/files/open-rider", async (request: any) => {
     const file = resolveFileUnderWorkspace(config.workspaceRoot, String(request.body?.path ?? ""));
-    const child = spawn("/usr/bin/open", ["-a", "Rider", "--", file], { detached: true, stdio: "ignore" });
-    child.unref();
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn("/usr/bin/open", ["-a", "Rider", "--", file], { stdio: "ignore" });
+      child.once("error", () => reject(new Error("Cannot launch Rider")));
+      child.once("exit", code => code === 0 ? resolve() : reject(new Error("Rider failed to open the file")));
+    });
     return { opened: true, path: file };
   });
 

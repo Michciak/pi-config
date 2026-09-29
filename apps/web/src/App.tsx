@@ -4,9 +4,12 @@ import type { Approval, PiEvent, SessionSummary, UserQuestion } from "@pi-local/
 import type { PromptSnippet } from "@pi-local/prompt-snippets";
 import { ApiError, connectEvents, controlApi, exchangeHashToken, type ControlStatus, type SubagentProfile } from "./api.js";
 import { commandSuggestions, selectSlashCommand, type SlashCommand } from "./commandPalette.js";
-import { Markdown, messageText } from "./Markdown.js";
+import { Markdown } from "./Markdown.js";
 import { QuestionCard } from "./QuestionCard.js";
 import { reduceLiveBlocks, toolEventText, type LiveBlocks } from "./stream.js";
+
+import { promptHistory, historyStep } from "./promptHistory.js";
+import { MessageContent } from "./MessageContent.js";
 
 type Model = { provider: string; id: string };
 
@@ -31,6 +34,9 @@ export default function App() {
   const [liveUsage, setLiveUsage] = useState<any>();
   const [queue, setQueue] = useState<{ steering: string[]; followUp: string[] }>({ steering: [], followUp: [] });
   const [connected, setConnected] = useState(false);
+  const historyPosition = useRef(-1);
+  const historyDraft = useRef("");
+  const [sentPrompts, setSentPrompts] = useState<Record<string, string[]>>({});
   const [composer, setComposer] = useState("");
   const [delivery, setDelivery] = useState<"prompt" | "steer" | "follow_up">("prompt");
   const [images, setImages] = useState<Array<{ type: "image"; data: string; mimeType: string }>>([]);
@@ -42,6 +48,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [pairing, setPairing] = useState<{ code: string; expiresAt: number; host: string; deepLink: string }>();
   const [deleteTarget, setDeleteTarget] = useState<SessionSummary>();
+  const followOutput = useRef(true);
   const endRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const selectedRef = useRef<string | undefined>(undefined);
@@ -98,7 +105,7 @@ export default function App() {
     setSelectedId(id);
     if (switchingSession) {
       setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
-      setAdvanced(false);
+      setAdvanced(false); historyPosition.current = -1; historyDraft.current = ""; setComposer("");
     }
     try {
       await readSession(id);
@@ -165,7 +172,7 @@ export default function App() {
     return () => disconnect();
   }, []);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, liveBlocks]);
+  useEffect(() => { followOutput.current && endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, liveBlocks]);
   useEffect(() => {
     if (interactionTarget) document.getElementById(`interaction-${interactionTarget}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [questions, approvals, interactionTarget]);
@@ -265,8 +272,8 @@ export default function App() {
       composer,
       ...active.filter((item) => item.placement === "append").map((item) => item.body),
     ].join("\n\n");
-    const original = composer; setComposer(""); setEnabledSnippets(new Set());
-    try { await controlApi.command(selectedId, delivery, { message, images }); setImages([]); await refresh(); }
+    const original = composer; historyPosition.current = -1; setComposer(""); setEnabledSnippets(new Set());
+    try { await controlApi.command(selectedId, delivery, { message, images }); setImages([]); setSentPrompts(current => ({...current, [selectedId]: [...(current[selectedId] ?? []), original]})); await refresh(); }
     catch (cause) { setComposer(original); setError(String(cause)); }
   }
 
@@ -459,23 +466,23 @@ export default function App() {
             </div>
             {inspection !== undefined && <div className="inspection-result"><header><span>Wynik operacji</span><button className="ghost" onClick={() => setInspection(undefined)}>×</button></header><pre>{JSON.stringify(inspection, null, 2)}</pre></div>}
             <details className="command-reference"><summary><span>Komendy slash</span><small>{commands.length} dostępnych</small></summary><ul>{commands.map((command) => <li key={command.name}>
-              <button onClick={() => { chooseCommand(command); setAdvanced(false); }}><code>/{command.name}</code><span>{command.description}</span><em>{command.source}</em></button>
+              <button onClick={() => { chooseCommand(command); setAdvanced(false); historyPosition.current = -1; historyDraft.current = ""; setComposer(""); }}><code>/{command.name}</code><span>{command.description}</span><em>{command.source}</em></button>
             </li>)}</ul></details>
           </section>}
 
-          <section className="messages">
+          <section className="messages" onScroll={event => { const el = event.currentTarget; followOutput.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
             {messages.map((message, index) => <article className={`message ${message.role ?? "system"}`} key={message.id ?? index}>
-              <div className="role">{message.role ?? message.type}</div><Markdown workspace={selected.workspace}>{messageText(message)}</Markdown>
+              <div className="role">{({user:"Ty", assistant:"Pi", toolResult:"Narzędzie", system:"System"} as Record<string,string>)[message.role] ?? message.role ?? message.type}</div><MessageContent message={message} workspace={selected.workspace} />
             </article>)}
-            {liveEvents.filter((event) => event.type.includes("tool_execution")).map((event) => <article className="tool-event" key={event.seq}>
-              <div><code>{event.type.replace("pi.", "")}</code><span>{String((event.payload as any)?.toolName ?? "")}</span></div>
-              {toolEventText(event.payload) && <pre>{toolEventText(event.payload)}</pre>}
-            </article>)}
+            {[...new Map(liveEvents.filter(event => event.type.includes("tool_execution")).map(event => [String((event.payload as any)?.toolCallId ?? event.seq), event])).values()].filter(event => !messages.some(message => message.role === "toolResult" && message.toolCallId === (event.payload as any)?.toolCallId)).map(event => <details className="tool-output" key={(event.payload as any)?.toolCallId ?? event.seq}>
+              <summary><strong>{String((event.payload as any)?.toolName ?? "Narzędzie")}</strong> · {event.type.endsWith("_end") ? "Zakończono" : "W toku"}</summary>
+              <pre>{toolEventText(event.payload)}</pre>
+            </details>)}
             {Object.keys(liveBlocks).length > 0 && <article className="message assistant live-message">
               <div className="role">assistant · streaming{liveUsage?.totalTokens ? ` · ${liveUsage.totalTokens} tokens` : ""}</div>
               {Object.entries(liveBlocks).sort(([left], [right]) => Number(left) - Number(right)).map(([index, block]) =>
                 block.type === "thinking"
-                  ? <details className="reasoning" open key={index}><summary>Reasoning</summary><Markdown workspace={selected.workspace}>{block.content}</Markdown></details>
+                  ? <details className="reasoning" key={index}><summary>Myślenie · w toku</summary><Markdown workspace={selected.workspace}>{block.content}</Markdown></details>
                   : block.type === "toolcall"
                     ? <div className="live-tool" key={index}><strong>Tool: {block.toolName ?? "pending"}</strong><pre>{block.content}</pre></div>
                     : <Markdown workspace={selected.workspace} key={index}>{block.content}</Markdown>)}
@@ -500,11 +507,21 @@ export default function App() {
                   <em>{command.source === "skill" ? "skill" : command.source === "prompt" ? "prompt" : "extension"}</em>
                 </button>)}
               </div>}
-              <textarea ref={composerRef} value={composer} rows={3} placeholder="Napisz do Pi…  Wpisz /, aby zobaczyć komendy" onChange={(event) => { setComposer(event.target.value); setSlashDismissed(false); }}
+              <textarea ref={composerRef} value={composer} rows={3} placeholder="Napisz do Pi…  / komendy · ↑↓ historia" onChange={(event) => { setComposer(event.target.value); historyPosition.current = -1; setSlashDismissed(false); }}
                 aria-autocomplete="list" aria-controls={showSuggestions ? "slash-suggestions" : undefined}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void send(); return; }
-                  if (!showSuggestions) return;
+                  if (!showSuggestions) {
+                    const input = event.currentTarget;
+                    if (event.nativeEvent.isComposing || event.altKey || event.metaKey || event.ctrlKey || event.shiftKey || input.selectionStart !== input.selectionEnd) return;
+                    const history = promptHistory(messages, sentPrompts[selectedId!] ?? []);
+                    const position = historyStep(event.key, historyPosition.current, history.length, input.value, input.selectionStart, input.selectionEnd);
+                    if (position === null) return;
+                    if (historyPosition.current === -1) historyDraft.current = composer;
+                    event.preventDefault(); historyPosition.current = position;
+                    setComposer(position === -1 ? historyDraft.current : history[position]!);
+                    setSlashDismissed(true); focusComposer(); return;
+                  }
                   if (event.key === "ArrowDown") { event.preventDefault(); setSuggestionIndex((current) => (current + 1) % suggestions.length); }
                   else if (event.key === "ArrowUp") { event.preventDefault(); setSuggestionIndex((current) => (current - 1 + suggestions.length) % suggestions.length); }
                   else if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); chooseCommand(suggestions[suggestionIndex] ?? suggestions[0]!); }

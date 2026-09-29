@@ -591,3 +591,18 @@ aside { overflow: auto; padding: 1rem; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* Conversation content: separate reasoning, commands and model prose. */
+.message { line-height: 1.65; overflow-wrap: anywhere; }
+.message > .role { margin-bottom: 12px; font-size: 11px; letter-spacing: .08em; }
+.message p { margin: .65em 0; }
+.message h1,.message h2,.message h3 { margin: 1.2em 0 .5em; line-height: 1.3; }
+.message pre,.tool-output pre { overflow: auto; max-height: 420px; white-space: pre-wrap; overflow-wrap: anywhere; padding: 14px; font-size: 12px; line-height: 1.6; }
+.reasoning,.tool-output { border: 1px solid #ffffff14; border-radius: 10px; background: #ffffff03; margin: 10px 0; padding: 0 14px; min-width: 0; }
+.reasoning summary,.tool-output summary { cursor: pointer; padding: 12px 0; color: #aab4c6; font-size: 12px; }
+.reasoning[open] summary,.tool-output[open] summary { border-bottom: 1px solid #ffffff12; }
+.reasoning { color: #9ba7bb; font-size: 13px; }
+.tool-output strong { color: #c4b5fd; font-family: ui-monospace, monospace; }
+.tool-output.failed { border-color: #f8717155; }
+.file-link { display: inline; padding: 0; border: 0; border-radius: 0; background: transparent; color: #b9a6ff; text-decoration: underline; text-underline-offset: 3px; font: inherit; overflow-wrap: anywhere; }
+.file-error { color: #fca5a5; font-size: 12px; }

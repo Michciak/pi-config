@@ -1,12 +1,14 @@
+function safeDecode(value: string): string { try { return decodeURIComponent(value); } catch { return value; } }
 function absolutePath(reference: string, workspace?: string): string | null {
+  if (!reference || reference.startsWith("#")) return null;
   const value = reference.replace(/:\d+(?::\d+)?$/, "");
   if (/^[a-z][\w+.-]*:/i.test(value) && !value.startsWith("file://")) return null;
   if (value.startsWith("file://")) {
     try { return decodeURIComponent(new URL(value).pathname); } catch { return null; }
   }
-  if (value.startsWith("/")) return decodeURIComponent(value);
+  if (value.startsWith("/")) return safeDecode(value);
   if (!workspace || value.startsWith("~/")) return null;
-  return `${workspace.replace(/\/+$/, "")}/${decodeURIComponent(value)}`;
+  return `${workspace.replace(/\/+$/, "")}/${safeDecode(value)}`;
 }
 
 export function localFilePath(href: string, workspace?: string): string | null {
@@ -28,6 +30,11 @@ export function linkLocalReferences(markdown: string, workspace?: string): strin
       if (token.startsWith("![") || token.startsWith("[") || /^[a-zA-Z][\w+.-]*:\/\//.test(token)) return token;
       const code = token.startsWith("`");
       const reference = code ? token.replace(/^`+|`+$/g, "") : token.replace(/[.,;]+$/, "");
+      if (!reference.includes("/") && !/^[\p{L}_@-][\p{L}\p{N}_@.-]*\.[a-zA-Z][a-zA-Z0-9]{0,12}(?::\d+)?$/u.test(reference)) return token;
+      const withoutLine = reference.replace(/:\d+(?::\d+)?$/, "");
+      const extension = /\.([a-zA-Z0-9]+)$/.exec(withoutLine)?.[1]?.toLowerCase();
+      const knownExtensions = new Set("ts tsx js jsx mjs cjs json md mdx txt py sh zsh bash cs csproj sln razor kt kts java swift c cpp h hpp go rs rb php html css scss yaml yml xml toml ini conf cfg sql proto gradle properties lock svg png jpg jpeg pdf csv vue svelte log env gitignore".split(" "));
+      if (!reference.startsWith("/") && !reference.startsWith("./") && !reference.startsWith("../") && (!extension || !knownExtensions.has(extension))) return token;
       const path = absolutePath(reference, workspace);
       if (!path) return token;
       const label = code ? token : reference.replace(/[\[\]]/g, "\\$&");

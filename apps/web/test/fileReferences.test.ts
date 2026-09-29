@@ -17,3 +17,16 @@ test("leaves URLs and fenced code unchanged and resolves link targets", () => {
   assert.equal(localFilePath("src/app.ts", workspace), "/Users/me/project/src/app.ts");
   assert.equal(localFilePath("https://example.com/x", workspace), null);
 });
+
+test("does not turn numbers and ordinary inline code into files", () => {
+  const source = 'Version `0.2.149`, `hello`, 7.163 and `feat/voice-v1`';
+  const linked = linkLocalReferences(source, '/work');
+  assert.ok(!linked.includes('file:///work/0.2.149'));
+  assert.ok(!linked.includes('file:///work/hello'));
+  assert.ok(!linked.includes('file:///work/feat/voice-v1'));
+  assert.equal(linkLocalReferences('state.Sprawdzam', '/work'), 'state.Sprawdzam');
+  assert.ok(!linked.includes('file:///work/7.163'));
+  assert.equal(localFilePath('', '/work'), null);
+  assert.equal(localFilePath('#heading', '/work'), null);
+  assert.doesNotThrow(() => localFilePath('/work/100%.txt'));
+});
