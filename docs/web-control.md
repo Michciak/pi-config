@@ -69,6 +69,7 @@ that root are rejected.
 
    ```sh
    ./scripts/configure-firebase-keychain.py ~/Downloads/firebase-admin.json
+   ./scripts/configure-firebase-keychain.py --check
    launchctl kickstart -k gui/$(id -u)/pl.michalkozinski.pi-control
    ```
 
@@ -149,3 +150,14 @@ reloads them from the Pi JSONL session.
 Runtime data lives in `~/.pi/agent/web-control`; it is not versioned. Removing
 the LaunchAgent leaves that directory and the backed-up global extensions in
 place.
+
+### Firebase Keychain import troubleshooting
+
+Run the importer in Warp or Terminal. It sends the credential over stdin to
+`security -i`, verifies the stored JSON by reading it back, and never puts the
+secret in process arguments. Earlier versions incorrectly used a bare `-w`
+with piped input, although that option prompts on the controlling terminal.
+If notifications show a configuration error, reimport with the corrected script.
+Finish active sessions before restarting Control Service, then send a test from
+Narzędzia sesji → Powiadomienia mobilne. FCM acceptance alone does not prove
+that Android displayed the notification.
