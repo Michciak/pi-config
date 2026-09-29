@@ -7,6 +7,7 @@ import datetime as dt
 import os
 import plistlib
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -46,6 +47,7 @@ def main() -> None:
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     backup_root = PI_AGENT / f"backups/pi-web-control-{stamp}"
     backup_root.mkdir(parents=True, exist_ok=True)
+    subprocess.check_call([sys.executable, str(REPO / "scripts/patch-cursor-thinking.py"), str(PI_AGENT), str(backup_root)])
     assets = [
         (REPO / "extensions/ask-user-question.ts", PI_AGENT / "extensions/ask-user-question.ts"),
         (REPO / "extensions/ask-user-question-contract.ts", PI_AGENT / "extensions/ask-user-question-contract.ts"),

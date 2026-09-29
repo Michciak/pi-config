@@ -73,7 +73,12 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   app.get("/api/v1/config", async () => ({ workspaceRoot: config.workspaceRoot, port: config.port }));
   app.get("/api/v1/openapi.json", async () => app.swagger());
   app.get("/api/v1/settings/pi/scope", async (request:any) => {
-    const models = request.query?.sessionId ? await engine.execute(String(request.query.sessionId), {command:"get_available_models",payload:{}}) : [];
+    let models: any[] = [];
+    const ids = [...new Set([request.query?.sessionId, ...engine.sessions().map(session => session.id)].filter(Boolean))];
+    for (const id of ids) {
+      try { models = await engine.execute(String(id), {command:"get_available_models",payload:{}}) as any[]; if(models.length) break; }
+      catch(error:any) { if(error.statusCode !== 409) throw error; }
+    }
     return scopeSnapshot(config.runtimeDir, models as any[]);
   });
   app.put("/api/v1/settings/pi/scope", async (request:any) => {

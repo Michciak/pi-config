@@ -14,3 +14,13 @@ test('scope update preserves unrelated Pi configuration and rejects stale writes
  await assert.rejects(saveScope(dir,['cursor/*'],['cursor/auto'],dir),/changed elsewhere/);
  await assert.rejects(saveScope(dir,[42],['openai-codex/*'],dir),/Invalid/);
 });
+
+test('scope without a model catalog does not report false no-match errors', async () => {
+ const {scopeSnapshot}=await import('../src/pi-settings.js');
+ const dir=mkdtempSync(join(tmpdir(),'pi-scope-empty-'));
+ writeFileSync(join(dir,'settings.json'),JSON.stringify({enabledModels:['cursor/grok-4.7']}));
+ const result=await scopeSnapshot(dir,[],dir);
+ assert.deepEqual(result.diagnostics,[]);
+ assert.equal(result.catalogAvailable,false);
+ assert.deepEqual(result.patterns,['cursor/grok-4.7']);
+});

@@ -24,8 +24,10 @@ export default function App() {
   const [sessionState, setSessionState] = useState<any>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState("application");
-  const [scope, setScope] = useState<{patterns:string[];resolved:string[];diagnostics:Array<{message:string}>}>({patterns:[],resolved:[],diagnostics:[]});
-  const [scopeText, setScopeText] = useState("");
+  const [scope, setScope] = useState<{patterns:string[];resolved:string[];models:Model[];catalogAvailable:boolean;diagnostics:Array<{message:string}>}>({patterns:[],resolved:[],models:[],catalogAvailable:false,diagnostics:[]});
+  const [scopeSelection, setScopeSelection] = useState<string[]>([]);
+  const [scopeQuery, setScopeQuery] = useState("");
+  const [scopeAll, setScopeAll] = useState(false);
   const [scopeNotice, setScopeNotice] = useState("");
   const [scopeGroup, setScopeGroup] = useState("scope");
   const [thinkingLevels, setThinkingLevels] = useState<string[]>([]);
@@ -307,12 +309,13 @@ export default function App() {
   }
 
   async function openSettings() {
-    try { const data = await controlApi.scope(selected?.status === "running" || selected?.status === "idle" ? selectedId : undefined); setScope(data); setScopeText(data.patterns.join("\n")); setScopeNotice(""); setSettingsOpen(true); }
+    try { const data = await controlApi.scope(selected?.status === "running" || selected?.status === "idle" ? selectedId : undefined); setScope(data); setScopeSelection(data.patterns); setScopeAll(!data.patterns.length); setScopeQuery(""); setScopeNotice(""); setSettingsOpen(true); }
     catch(cause) { setError(String(cause)); }
   }
   async function saveModelScope() {
+    if (!scopeAll && !scopeSelection.length) { setScopeNotice("Wybierz przynajmniej jeden model albo opcję Wszystkie modele."); return; }
     try {
-      await controlApi.saveScope(scopeText.split("\n").map(s => s.trim()).filter(Boolean), scope.patterns);
+      await controlApi.saveScope(scopeAll ? [] : scopeSelection, scope.patterns);
       setScope(await controlApi.scope(selectedId));
       setScopeNotice("Zapisano globalny scope Pi. Uruchom nową sesję lub zatrzymaj i wznów obecną, aby zastosować go również do orchestratora i subagentów.");
     } catch(cause) { setScopeNotice(String(cause)); }
@@ -400,7 +403,11 @@ export default function App() {
                 {notificationState !== "enabled" && <small className="notification-help">Dodaj konto Firebase Admin do macOS Keychain i zrestartuj Control Service.</small>}
               </article>
 </>}
-      {settingsTab === "pi" && <><h3>Globalny scope modeli</h3><p>Jedna nazwa provider/model lub wzorzec Pi na linię. Pusta lista oznacza wszystkie dostępne modele.</p><textarea aria-label="Scope modeli" rows={10} value={scopeText} onChange={event => setScopeText(event.target.value)} />
+      {settingsTab === "pi" && <><h3>Globalny scope modeli</h3><label className="scope-option"><input type="checkbox" checked={scopeAll} onChange={event => setScopeAll(event.target.checked)} />Wszystkie dostępne modele</label>
+      <input aria-label="Szukaj w scope" placeholder="Filtruj modele i dostawców…" value={scopeQuery} onChange={event => setScopeQuery(event.target.value)} />
+      {!scope.catalogAvailable && <p role="status">Katalog modeli nie jest jeszcze dostępny. Otwórz lub wznów sesję Pi, a następnie ponownie otwórz ustawienia. Zapisane pozycje scope pozostają zachowane.</p>}
+      <div className="scope-selector">{[...new Set([...scope.patterns,...scope.models.map(m => `${m.provider}/${m.id}`)])].filter(ref => ref.toLowerCase().includes(scopeQuery.toLowerCase())).sort().map(ref => <label className="scope-option" key={ref}><input type="checkbox" disabled={scopeAll} checked={scopeAll || scopeSelection.includes(ref)} onChange={event => setScopeSelection(current => event.target.checked ? [...current,ref] : current.filter(item => item !== ref))} /><span>{ref}<small>{ref.includes("*") ? "Zapisany wzorzec Pi" : !scope.models.some(m => `${m.provider}/${m.id}` === ref) ? "Zapisana pozycja · brak w bieżącym katalogu" : ref.split("/")[0]}</small></span></label>)}</div>
+      <small>{scopeAll ? "Cały katalog" : `${scopeSelection.length} wybranych pozycji`}</small>
       <button onClick={() => void saveModelScope()}>Zapisz scope</button>{scopeNotice && <p role="status">{scopeNotice}</p>}
       {scope.diagnostics.map((item,index) => <p key={index}>{item.message}</p>)}
       <p>Model i poziom myślenia wybierasz osobno w nagłówku sesji. Retry i kompakcja dotyczą aktywnej sesji i pozostają w jej narzędziach.</p></>}
@@ -465,7 +472,7 @@ export default function App() {
               <label><span>Model</span><button className="model-picker-trigger ghost" disabled={settingsBusy} onClick={() => { setModelPicker(true); setModelQuery(""); setModelProvider(""); }}>{sessionState?.model ? `${sessionState.model.provider} / ${sessionState.model.id}` : "Wybierz model"} ▾</button></label>
               <label className="thinking-control"><span>Myślenie</span><select aria-label="Poziom myślenia" disabled={settingsBusy || thinkingLevels.length < 2} value={sessionState?.thinkingLevel ?? "off"} onChange={event => void changeSetting("set_thinking_level", {level:event.target.value})}>
                 {thinkingLevels.length ? thinkingLevels.map(level => <option key={level}>{level}</option>) : <option value="off">Niedostępne</option>}
-              </select>{thinkingLevels.length < 2 && <small className="thinking-hint">{sessionState?.model?.provider === "cursor" ? "Ten model Cursor nie udostępnia regulacji myślenia w Pi." : "Brak regulacji dla tego modelu."}</small>}</label>
+              </select>{thinkingLevels.length < 2 && <span className="thinking-info" tabIndex={0} aria-label="Informacja o myśleniu" title="Bieżący katalog modelu nie udostępnia regulacji myślenia. W przypadku Cursor może to wynikać z wersji rozszerzenia lub jego katalogu modeli.">ⓘ</span>}</label>
               <button className={`tools-toggle ghost ${advanced ? "active" : ""}`} aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}><span>⌘</span>Narzędzia</button>
             </div>
           </div>

@@ -199,3 +199,21 @@ Thinking updates validate available levels and read back Pi's actual selection.
 A Cursor model with fewer than two supported levels displays an explanation
 instead of suggesting a usable control. This does not add reasoning support to
 models/providers that do not expose it.
+
+### Scope selector and Cursor Grok compatibility
+
+Scope settings use searchable checkboxes, retaining existing patterns and missing
+catalog entries until explicitly deselected. The All models checkbox corresponds
+to Pi's empty enabledModels list. With no running session/catalog, saved entries
+remain editable and no false no-match diagnostics are generated. The service
+tries available session catalogs even when no chat is selected.
+
+The installer applies a backed-up compatibility patch only to pi-cursor-sdk
+0.3.10. Its catalog parser missed Cursor's reasoning_effort parameter (used by
+Grok 4.7), so Pi advertised no configurable thinking. The patch recognizes the
+parameter and forwards selected levels using that same parameter name. Both
+source and installed JS are patched, with exact source checks and idempotence.
+Other package versions are left unchanged. Source: locally installed MIT package
+pi-cursor-sdk 0.3.10 (fitchmultz/pi-cursor-sdk), src/model-discovery.ts.
+Provider catalog mapping was tested offline; a live Cursor generation still
+requires deployment and a new/resumed session. SDK updates may replace the fix.

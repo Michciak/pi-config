@@ -85,7 +85,7 @@ export const controlApi = {
   cancelQuestion: (id: string) => api<UserQuestion>(`/questions/${id}/cancel`, { method: "POST" }),
   approvals: () => api<Approval[]>("/approvals"),
   decideApproval: (id: string, approve: boolean) => api<Approval>(`/approvals/${id}/decision`, { method: "POST", body: JSON.stringify({ decision: approve ? "approve" : "reject" }) }),
-  scope: (sessionId?: string) => api<{patterns:string[];resolved:string[];diagnostics:Array<{message:string}>}>(`/settings/pi/scope${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ""}`),
+  scope: (sessionId?: string) => api<{patterns:string[];resolved:string[];models:Array<{id:string;provider:string}>;catalogAvailable:boolean;diagnostics:Array<{message:string}>}>(`/settings/pi/scope${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ""}`),
   saveScope: (patterns:string[], expected:string[]) => api("/settings/pi/scope", {method:"PUT",body:JSON.stringify({patterns,expected})}),
   directories: (path: string) => api<{ path: string; parent: string | null; directories: Array<{name: string; path: string}> }>(`/directories?path=${encodeURIComponent(path)}`),
   openRider: (path: string) => api("/files/open-rider", { method: "POST", body: JSON.stringify({ path }) }),

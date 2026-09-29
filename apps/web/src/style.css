@@ -627,3 +627,11 @@ aside { overflow: auto; padding: 1rem; }
 .settings-modal textarea { min-height: 220px; font: 12px/1.6 ui-monospace, monospace; }
 .settings-modal .folder-actions { flex-wrap: wrap; justify-content: flex-start; }
 .thinking-hint { display: block; max-width: 190px; color: #939caf; font-size: 10px; line-height: 1.4; }
+.scope-selector { max-height: 44dvh; overflow: auto; display: grid; gap: 3px; }
+.selection-modal .scope-option { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 9px; border-radius: 8px; }
+.scope-option:hover { background: #ffffff06; }
+.scope-option input { width: 16px; min-height: 16px; flex-shrink: 0; }
+.scope-option span { overflow-wrap: anywhere; }
+.scope-option small { display: block; color: #7e899c; margin-top: 3px; }
+.thinking-control { position: relative; }
+.thinking-info { position: absolute; right: 0; top: 0; cursor: help; color: #939caf; font-size: 12px; }
