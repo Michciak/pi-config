@@ -648,3 +648,17 @@ aside { overflow: auto; padding: 1rem; }
 .composer-resizer { height:16px; text-align:center; cursor:ns-resize; touch-action:none; color:#8893a6; user-select:none; }
 .composer textarea { max-height:400px; }
 @media(max-width:900px){.layout {grid-template-columns:1fr;} .usage-summary{width:100%;}}
+
+/* Chat tabs share the neutral surface palette; selection is a thin accent. */
+.chat-tabs { gap:4px; padding:8px 16px 0; background:transparent; }
+.chat-tabs .chat-tab { max-width:280px; min-width:140px; padding:10px 12px; border:0; border-bottom:2px solid transparent; border-radius:8px 8px 0 0; box-shadow:none; background:transparent; color:#9fa9bd; text-align:left; }
+.chat-tabs .chat-tab:hover { background:#ffffff06; transform:none; }
+.chat-tabs .chat-tab[aria-selected="true"] { background:#a695ff0b; border-bottom-color:#aa98ff; color:#ece9ff; }
+.chat-tab-title { display:flex; align-items:center; gap:7px; width:100%; font-size:12px; font-weight:600; }
+.chat-tabs .chat-tab small { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; font-weight:400; color:#8993a8; }
+.agent-state { margin-left:auto; font-size:10px; font-weight:400; color:#929bae; }
+.agent-dot { width:6px; height:6px; border-radius:50%; background:#8993a8; flex-shrink:0; }
+.agent-dot.running,.agent-dot.starting { background:#a695ff; }
+.agent-dot.waiting { background:#e6b86a; }
+.agent-dot.completed { background:#79bd9a; }
+.agent-dot.error { background:#e68792; }

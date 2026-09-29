@@ -25,6 +25,7 @@ function now(): string { return new Date().toISOString(); }
 export class EngineManager {
   private statusValue: EngineStatus = "stopped";
   private readonly childLive = new Map<string, any>();
+  private readonly launching = new Map<string, Promise<void>>();
   private readonly running = new Map<string, RuntimeSession>();
   private caffeinate?: ChildProcess;
   private readonly cliPath: string;
@@ -60,6 +61,7 @@ export class EngineManager {
     if (this.statusValue === "stopped") return;
     this.setStatus("stopping");
     this.interactions.invalidateAll(reason);
+    await Promise.allSettled([...this.launching.values()]);
     await Promise.allSettled([...this.running.keys()].map((id) => this.stopSession(id, true)));
     this.caffeinate?.kill("SIGTERM");
     this.caffeinate = undefined;
@@ -173,7 +175,16 @@ export class EngineManager {
         const levels = await client.getAvailableThinkingLevels();
         if (!levels.includes(payload.level as any)) throw Object.assign(new Error(`This model supports: ${levels.join(", ") || "no configurable thinking"}`), {statusCode:400});
         await client.setThinkingLevel(payload.level as any);
-        const state = await client.getState();
+        // Extension/provider discovery can exceed the RPC client's 30s request limit.
+      // Retry only the read-only readiness probe, never prompts or tools.
+      let state;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { state = await client.getState(); break; }
+        catch (error) {
+          if (!String(error).includes("Timeout waiting for response") || attempt === 2) throw error;
+        }
+      }
+      if (!state) throw new Error("Pi did not report its state");
         if (state.thinkingLevel !== payload.level) throw Object.assign(new Error(`Pi selected thinking level ${state.thinkingLevel}; requested level was not applied`), {statusCode:409});
         return {level:state.thinkingLevel};
       }
@@ -228,7 +239,15 @@ export class EngineManager {
     }
   }
 
-  private async launch(summary: SessionSummary, sessionPath?: string): Promise<void> {
+  private launch(summary: SessionSummary, sessionPath?: string): Promise<void> {
+    const pending = this.launching.get(summary.id);
+    if (pending) return pending;
+    const task = this.launchProcess(summary, sessionPath).finally(() => this.launching.delete(summary.id));
+    this.launching.set(summary.id, task);
+    return task;
+  }
+
+  private async launchProcess(summary: SessionSummary, sessionPath?: string): Promise<void> {
     const args = ["--session-dir", this.config.sessionsDir];
     if (sessionPath) args.push("--session", sessionPath);
     else args.push("--name", summary.name);
@@ -264,6 +283,7 @@ export class EngineManager {
       this.events.publish("session.started", summary, summary.id);
     } catch (error) {
       unsubscribe();
+      await client.stop().catch(() => {});
       summary.status = "error";
       summary.updatedAt = now();
       this.store.upsertSession(summary);

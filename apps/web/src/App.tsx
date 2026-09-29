@@ -89,7 +89,15 @@ export default function App() {
 
   useEffect(() => { selectedRef.current = selectedId; }, [selectedId]);
 
-  async function refresh() {
+  const refreshing = useRef<Promise<void> | undefined>(undefined);
+  const loadingSessions = useRef(new Map<string, Promise<void>>());
+  function refresh(): Promise<void> {
+    if (refreshing.current) return refreshing.current;
+    const task = refreshNow().finally(() => { refreshing.current = undefined; });
+    refreshing.current = task;
+    return task;
+  }
+  async function refreshNow() {
     const [nextStatus, nextQuestions, nextApprovals] = await Promise.all([
       controlApi.status(), controlApi.questions(), controlApi.approvals(),
     ]);
@@ -121,11 +129,21 @@ export default function App() {
       controlApi.subagents(id).catch(() => []),
       controlApi.command<string[]>(id, "get_available_thinking_levels"),
     ]);
-    setScope(await controlApi.scope(id)); setChildRuns(await controlApi.subagentRuns(id)); setConversationStats(await controlApi.command(id,"get_session_stats")); setThinkingLevels(nextThinkingLevels); setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands([...nextCommands,...webCommands.filter(item=>!nextCommands.some(command=>command.name===item.name))]); setSubagents(nextSubagents);
+    const [nextScope, children, stats] = await Promise.all([controlApi.scope(id), controlApi.subagentRuns(id), controlApi.command(id,"get_session_stats")]);
+    if (selectedRef.current !== id) return;
+    setScope(nextScope); setChildRuns(children); setConversationStats(stats); setThinkingLevels(nextThinkingLevels); setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands([...nextCommands,...webCommands.filter(item=>!nextCommands.some(command=>command.name===item.name))]); setSubagents(nextSubagents);
   }
 
-  async function loadSession(id: string, resumeIfNeeded = true) {
+  function loadSession(id: string, resumeIfNeeded = true): Promise<void> {
+    const pending = loadingSessions.current.get(id);
+    if (pending) return pending;
+    const task = loadSessionNow(id, resumeIfNeeded).finally(() => loadingSessions.current.delete(id));
+    loadingSessions.current.set(id, task);
+    return task;
+  }
+  async function loadSessionNow(id: string, resumeIfNeeded = true) {
     const switchingSession = selectedRef.current !== id;
+    selectedRef.current = id;
     setSelectedId(id);
     if (switchingSession) {
       setChatTab("main"); setChildRuns([]); setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
@@ -154,6 +172,11 @@ export default function App() {
   useEffect(() => {
     let disconnect = () => {};
     let connectedOnce = false;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRefresh = () => {
+      if (refreshTimer) return;
+      refreshTimer = setTimeout(() => { refreshTimer = undefined; void refresh().catch(cause => setError(String(cause))); const id = selectedRef.current; if (id) void controlApi.subagentRuns(id).then(rows => { if (selectedRef.current === id) setChildRuns(rows); }).catch(() => {}); }, 250);
+    };
     void (async () => {
       try {
         await exchangeHashToken();
@@ -162,10 +185,10 @@ export default function App() {
         setSnippets(availableSnippets);
         await refresh();
         disconnect = connectEvents(0, (event) => {
-          if(event.type === "subagent.updated") { void refresh(); if(event.sessionId === selectedRef.current) void controlApi.subagentRuns(event.sessionId!).then(setChildRuns).catch(()=>{}); }
+          if(event.type === "subagent.updated") scheduleRefresh();
           setEvents((current) => [...current.slice(-499), event]);
-          if (event.type === "engine.status_changed" || event.type.startsWith("session.")) void refresh();
-          if (event.type.startsWith("user_question.") || event.type.startsWith("approval.")) void refresh();
+          if (event.type === "engine.status_changed" || event.type.startsWith("session.")) scheduleRefresh();
+          if (event.type.startsWith("user_question.") || event.type.startsWith("approval.")) scheduleRefresh();
           if (event.type === "ui.setTitle" && typeof (event.payload as any)?.title === "string") document.title = (event.payload as any).title;
           if (event.type === "ui.set_editor_text" && event.sessionId === selectedRef.current) setComposer(String((event.payload as any)?.text ?? ""));
           if (event.sessionId === selectedRef.current && event.type === "pi.message_start") {
@@ -194,7 +217,7 @@ export default function App() {
         });
       } catch (cause) { setError(String(cause)); }
     })();
-    return () => disconnect();
+    return () => { disconnect(); if (refreshTimer) clearTimeout(refreshTimer); };
   }, []);
 
   useEffect(() => { followOutput.current && endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, liveBlocks]);
@@ -573,7 +596,13 @@ export default function App() {
             </li>)}</ul></details>
           </section>}
 
-          <nav className="chat-tabs" aria-label="Karty czatu"><button className={chatTab==="main"?"":"ghost"} onClick={()=>setChatTab("main")}>Orchestrator</button>{childRuns.map(child=><button className={chatTab===child.id?"":"ghost"} key={child.id} onClick={()=>setChatTab(child.id)}><strong>{child.name}</strong><small>{child.model} · {child.status}</small></button>)}</nav>
+          <nav className="chat-tabs" aria-label="Karty czatu" role="tablist">
+            <button role="tab" aria-selected={chatTab === "main"} className="chat-tab" onClick={()=>setChatTab("main")}><span className="chat-tab-title">Orchestrator</span><small>Główna rozmowa</small></button>
+            {childRuns.map(child=><button role="tab" aria-selected={chatTab===child.id} className="chat-tab" key={child.id} onClick={()=>setChatTab(child.id)}>
+              <span className="chat-tab-title"><span className={`agent-dot ${child.status}`} />{child.name}<span className="agent-state">{({running:"Pracuje",starting:"Startuje",waiting:"Czeka",completed:"Gotowe",error:"Błąd",interrupted:"Przerwano"} as Record<string,string>)[child.status] ?? child.status}</span></span>
+              <small title={child.model}>{child.model || "Model niedostępny"}</small>
+            </button>)}
+          </nav>
           {viewedChild && <section className="messages child-messages"><div className="child-heading">{viewedChild.name} · {viewedChild.model} · {viewedChild.status}<p>Podgląd subagenta. Wiadomości z pola poniżej trafiają do orchestratora.</p></div>{viewedChild.messages.map((message:any,index:number)=><article className="message" key={index}><div className="role">{message.toolName ?? message.role}</div><MessageContent message={message} workspace={selected.workspace} /></article>)}{viewedChild.liveMessage && <article className="message"><MessageContent message={viewedChild.liveMessage} workspace={selected.workspace}/></article>}</section>}
           <section className="messages" style={{display:viewedChild ? "none" : undefined}} onScroll={event => { const el = event.currentTarget; followOutput.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
             {messages.map((message, index) => <article className={`message ${message.role ?? "system"}`} key={message.id ?? index}>
