@@ -184,3 +184,18 @@ Nowa sesja opens a dedicated form with a folder browser. The browser lists only
 directories under the configured workspace root, validates real paths and hides
 symlinks that escape that root. Select Wybierz ten folder to apply the current
 folder. Creating a session requires an explicit final click.
+
+### Settings and scope
+
+Ustawienia is independent of session tools: Aplikacja contains Engine/Control
+lifecycle, phone pairing and notifications; Pi · Modele i scope edits global
+`enabledModels`; Pi · Diagnostyka shows extension status. Model selection offers
+global scope, all models, and models outside scope, with a provider filter.
+Scope patterns are resolved by Pi's own resolver. Saves use Pi SettingsManager
+and retain unrelated settings. New or stopped-and-resumed sessions load the new
+scope; already running orchestrators keep their existing scope until resumed.
+
+Thinking updates validate available levels and read back Pi's actual selection.
+A Cursor model with fewer than two supported levels displays an explanation
+instead of suggesting a usable control. This does not add reasoning support to
+models/providers that do not expose it.

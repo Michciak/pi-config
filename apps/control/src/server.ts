@@ -1,3 +1,4 @@
+import { scopeSnapshot, saveScope } from "./pi-settings.js";
 import { randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { hostname, networkInterfaces } from "node:os";
@@ -71,6 +72,14 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   }));
   app.get("/api/v1/config", async () => ({ workspaceRoot: config.workspaceRoot, port: config.port }));
   app.get("/api/v1/openapi.json", async () => app.swagger());
+  app.get("/api/v1/settings/pi/scope", async (request:any) => {
+    const models = request.query?.sessionId ? await engine.execute(String(request.query.sessionId), {command:"get_available_models",payload:{}}) : [];
+    return scopeSnapshot(config.runtimeDir, models as any[]);
+  });
+  app.put("/api/v1/settings/pi/scope", async (request:any) => {
+    await saveScope(config.runtimeDir, request.body?.patterns, request.body?.expected);
+    return {saved:true, appliesTo:"new-or-resumed-sessions"};
+  });
   app.get("/api/v1/directories", async (request: any, reply) => {
     try { return listWorkspaceDirectories(config.workspaceRoot, String(request.query?.path ?? config.workspaceRoot)); }
     catch { return reply.code(400).send({ error: "Folder is unavailable or outside the allowed workspace" }); }

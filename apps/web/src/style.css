@@ -620,3 +620,10 @@ aside { overflow: auto; padding: 1rem; }
 .extension-diagnostics { color: #8893a6; font-size: 11px; }
 .extension-diagnostics summary { cursor: pointer; }
 @media(max-width: 700px) { .model-picker-trigger { max-width: 220px; } .selection-modal { padding: 16px; } }
+.settings-modal { width: min(760px, calc(100vw - 32px)); }
+.settings-tabs { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid #ffffff15; }
+.settings-modal h3 { margin: 8px 0 0; font-size: 14px; }
+.settings-modal p { color: #aab4c6; font-size: 13px; line-height: 1.6; }
+.settings-modal textarea { min-height: 220px; font: 12px/1.6 ui-monospace, monospace; }
+.settings-modal .folder-actions { flex-wrap: wrap; justify-content: flex-start; }
+.thinking-hint { display: block; max-width: 190px; color: #939caf; font-size: 10px; line-height: 1.4; }

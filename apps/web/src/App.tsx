@@ -22,6 +22,12 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string>();
   const [messages, setMessages] = useState<any[]>([]);
   const [sessionState, setSessionState] = useState<any>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("application");
+  const [scope, setScope] = useState<{patterns:string[];resolved:string[];diagnostics:Array<{message:string}>}>({patterns:[],resolved:[],diagnostics:[]});
+  const [scopeText, setScopeText] = useState("");
+  const [scopeNotice, setScopeNotice] = useState("");
+  const [scopeGroup, setScopeGroup] = useState("scope");
   const [thinkingLevels, setThinkingLevels] = useState<string[]>([]);
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [modelPicker, setModelPicker] = useState(false);
@@ -108,7 +114,7 @@ export default function App() {
       controlApi.subagents(id).catch(() => []),
       controlApi.command<string[]>(id, "get_available_thinking_levels"),
     ]);
-    setThinkingLevels(nextThinkingLevels); setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands); setSubagents(nextSubagents);
+    setScope(await controlApi.scope(id)); setThinkingLevels(nextThinkingLevels); setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands); setSubagents(nextSubagents);
   }
 
   async function loadSession(id: string, resumeIfNeeded = true) {
@@ -300,6 +306,18 @@ export default function App() {
     catch (cause) { setError(String(cause)); await refresh(); }
   }
 
+  async function openSettings() {
+    try { const data = await controlApi.scope(selected?.status === "running" || selected?.status === "idle" ? selectedId : undefined); setScope(data); setScopeText(data.patterns.join("\n")); setScopeNotice(""); setSettingsOpen(true); }
+    catch(cause) { setError(String(cause)); }
+  }
+  async function saveModelScope() {
+    try {
+      await controlApi.saveScope(scopeText.split("\n").map(s => s.trim()).filter(Boolean), scope.patterns);
+      setScope(await controlApi.scope(selectedId));
+      setScopeNotice("Zapisano globalny scope Pi. Uruchom nową sesję lub zatrzymaj i wznów obecną, aby zastosować go również do orchestratora i subagentów.");
+    } catch(cause) { setScopeNotice(String(cause)); }
+  }
+
   async function browseFolders(path: string) {
     const request = ++folderRequest.current;
     setFolderError("");
@@ -314,6 +332,7 @@ export default function App() {
     try {
       await controlApi.command(id, command, payload);
       const [state, levels] = await Promise.all([controlApi.command(id, "get_state"), controlApi.command<string[]>(id, "get_available_thinking_levels")]);
+      if (command === "set_thinking_level" && (state as any)?.thinkingLevel !== payload.level) throw new Error("Pi nie zastosował wybranego poziomu myślenia.");
       if (selectedRef.current === id) { setSessionState(state); setThinkingLevels(levels); }
       setModelPicker(false); setError("");
     } catch (cause) { setError(String(cause)); }
@@ -343,11 +362,8 @@ export default function App() {
         <span className={`engine-status ${engineState}`} title={status ? "Control Service dostępny" : "Brak połączenia z Control Service"}>
           <i className="dot" /><span>Pi Engine</span><b>{engineLabel}</b>
         </span>
-        <button className="ghost" onClick={startPairing}>Telefon</button>
-        <button onClick={() => engineAction("start")} disabled={status?.engine === "running"}>Start</button>
-        <button className="ghost" onClick={() => engineAction("restart")} disabled={status?.engine !== "running"}>Restart</button>
-        <button className="danger ghost" onClick={() => engineAction("stop")} disabled={status?.engine === "stopped"}>Stop</button>
-        <button className="ghost" title="Control Service uruchomi się ponownie przez launchd" onClick={() => void controlApi.restartControl()}>↻ Control</button>
+        <button className="ghost" onClick={() => void openSettings()}>Ustawienia</button>
+
       </div>
     </header>
 
@@ -363,11 +379,39 @@ export default function App() {
         <a href={pairing.deepLink}>Otwórz w Pi Remote</a>
       </section>
     </div>}
+    {settingsOpen && <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}><section className="selection-modal settings-modal" role="dialog" aria-modal="true" aria-label="Ustawienia" onClick={event => event.stopPropagation()} onKeyDown={event => {if(event.key === "Escape") setSettingsOpen(false);}}>
+      <div className="selection-title"><h2>Ustawienia</h2><button className="ghost" onClick={() => setSettingsOpen(false)}>Zamknij</button></div>
+      <nav className="settings-tabs">{[["application","Aplikacja"],["pi","Pi · Modele i scope"],["diagnostics","Pi · Diagnostyka"]].map(([id,label]) => <button className={settingsTab === id ? "" : "ghost"} key={id} onClick={() => setSettingsTab(id!)}>{label}</button>)}</nav>
+      {settingsTab === "application" && <><h3>Usługi</h3><div className="folder-actions">        <button onClick={() => engineAction("start")} disabled={status?.engine === "running"}>Start</button>
+        <button className="ghost" onClick={() => engineAction("restart")} disabled={status?.engine !== "running"}>Restart</button>
+        <button className="danger ghost" onClick={() => engineAction("stop")} disabled={status?.engine === "stopped"}>Stop</button>
+        <button className="ghost" title="Control Service uruchomi się ponownie przez launchd" onClick={() => void controlApi.restartControl()}>↻ Control</button></div><h3>Telefon i powiadomienia</h3><button onClick={() => {setSettingsOpen(false); void startPairing();}}>Sparuj telefon</button>              <article className="tool-card notification-card">
+                <div className="tool-card-head"><span>Powiadomienia mobilne</span><small>Firebase Cloud Messaging</small></div>
+                <div className={`notification-health ${notificationState}`}>
+                  <i /><span><b>{notificationLabel}</b><small>{status?.notifications
+                    ? `${status.notifications.registeredDevices} z ${status.notifications.pairedDevices} urządzeń ma token FCM`
+                    : "Brak danych diagnostycznych"}</small></span>
+                </div>
+                {status?.notifications?.lastDelivery && <p className="delivery-result">
+                  Ostatnia próba: {status.notifications.lastDelivery.successCount} dostarczono · {status.notifications.lastDelivery.failureCount} błędów
+                </p>}
+                <button className="ghost notification-test" disabled={notificationState !== "enabled" || !status?.notifications?.registeredDevices}
+                  onClick={() => void testNotification()}>Wyślij test na telefon</button>
+                {notificationState !== "enabled" && <small className="notification-help">Dodaj konto Firebase Admin do macOS Keychain i zrestartuj Control Service.</small>}
+              </article>
+</>}
+      {settingsTab === "pi" && <><h3>Globalny scope modeli</h3><p>Jedna nazwa provider/model lub wzorzec Pi na linię. Pusta lista oznacza wszystkie dostępne modele.</p><textarea aria-label="Scope modeli" rows={10} value={scopeText} onChange={event => setScopeText(event.target.value)} />
+      <button onClick={() => void saveModelScope()}>Zapisz scope</button>{scopeNotice && <p role="status">{scopeNotice}</p>}
+      {scope.diagnostics.map((item,index) => <p key={index}>{item.message}</p>)}
+      <p>Model i poziom myślenia wybierasz osobno w nagłówku sesji. Retry i kompakcja dotyczą aktywnej sesji i pozostają w jej narzędziach.</p></>}
+      {settingsTab === "diagnostics" && <><h3>Rozszerzenia aktywnej sesji</h3>            {extensionUi.statuses.length > 0 && <details className="extension-diagnostics"><summary>Status rozszerzeń</summary>{extensionUi.statuses.map(([key,value]) => <div key={key}><strong>{key}</strong>: {value}</div>)}</details>}<p>Status Cursor informuje o backendzie i trybie fast; nie jest ustawieniem poziomu myślenia.</p></>}
+    </section></div>}
     {modelPicker && <div className="modal-backdrop" onClick={() => setModelPicker(false)}><section className="selection-modal" role="dialog" aria-modal="true" aria-label="Wybierz model" onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === "Escape") setModelPicker(false); }}>
       <div className="selection-title"><h2>Wybierz model</h2><button className="ghost" onClick={() => setModelPicker(false)}>Zamknij</button></div>
       <input autoFocus aria-label="Szukaj modelu" placeholder="Szukaj po nazwie lub dostawcy…" value={modelQuery} onChange={event => setModelQuery(event.target.value)} />
       <select aria-label="Dostawca modeli" value={modelProvider} onChange={event => setModelProvider(event.target.value)}><option value="">Wszyscy dostawcy</option>{[...new Set(models.map(m => m.provider))].sort().map(provider => <option key={provider}>{provider}</option>)}</select>
-      <div className="selection-list">{models.filter(m => (!modelProvider || m.provider === modelProvider) && `${m.provider}/${m.id}`.toLowerCase().includes(modelQuery.toLowerCase())).map(m => <button className="ghost" disabled={settingsBusy} key={`${m.provider}/${m.id}`} onClick={() => void changeModel(`${m.provider}/${m.id}`)}><strong>{m.id}</strong><small>{m.provider}{sessionState?.model?.id === m.id && sessionState?.model?.provider === m.provider ? " · Wybrany" : ""}</small></button>)}</div>
+      <select aria-label="Grupa modeli" value={scopeGroup} onChange={event => setScopeGroup(event.target.value)}><option value="scope">Globalny scope Pi ({scope.resolved.length})</option><option value="all">Wszystkie modele ({models.length})</option><option value="outside">Poza scope</option></select>
+      <div className="selection-list">{models.filter(m => (scopeGroup === "all" || (scopeGroup === "scope" ? scope.resolved.includes(`${m.provider}/${m.id}`) : !scope.resolved.includes(`${m.provider}/${m.id}`))) && (!modelProvider || m.provider === modelProvider) && `${m.provider}/${m.id}`.toLowerCase().includes(modelQuery.toLowerCase())).map(m => <button className="ghost" disabled={settingsBusy} key={`${m.provider}/${m.id}`} onClick={() => void changeModel(`${m.provider}/${m.id}`)}><strong>{m.id}</strong><small>{m.provider}{sessionState?.model?.id === m.id && sessionState?.model?.provider === m.provider ? " · Wybrany" : ""}</small></button>)}</div>
     </section></div>}
     {newSessionOpen && <div className="modal-backdrop" onClick={() => !creating && setNewSessionOpen(false)}><section className="selection-modal" role="dialog" aria-modal="true" aria-label="Nowa sesja" onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === "Escape" && !creating) setNewSessionOpen(false); }}>
       <div className="selection-title"><h2>Nowa sesja</h2><button className="ghost" disabled={creating} onClick={() => setNewSessionOpen(false)}>Anuluj</button></div>
@@ -421,7 +465,7 @@ export default function App() {
               <label><span>Model</span><button className="model-picker-trigger ghost" disabled={settingsBusy} onClick={() => { setModelPicker(true); setModelQuery(""); setModelProvider(""); }}>{sessionState?.model ? `${sessionState.model.provider} / ${sessionState.model.id}` : "Wybierz model"} ▾</button></label>
               <label className="thinking-control"><span>Myślenie</span><select aria-label="Poziom myślenia" disabled={settingsBusy || thinkingLevels.length < 2} value={sessionState?.thinkingLevel ?? "off"} onChange={event => void changeSetting("set_thinking_level", {level:event.target.value})}>
                 {thinkingLevels.length ? thinkingLevels.map(level => <option key={level}>{level}</option>) : <option value="off">Niedostępne</option>}
-              </select></label>
+              </select>{thinkingLevels.length < 2 && <small className="thinking-hint">{sessionState?.model?.provider === "cursor" ? "Ten model Cursor nie udostępnia regulacji myślenia w Pi." : "Brak regulacji dla tego modelu."}</small>}</label>
               <button className={`tools-toggle ghost ${advanced ? "active" : ""}`} aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}><span>⌘</span>Narzędzia</button>
             </div>
           </div>
@@ -437,7 +481,7 @@ export default function App() {
           </nav>}
 
           {(extensionUi.statuses.length > 0 || extensionUi.widgets.length > 0 || extensionUi.notices.length > 0) && <section className="extension-ui">
-            {extensionUi.statuses.length > 0 && <details className="extension-diagnostics"><summary>Status rozszerzeń</summary>{extensionUi.statuses.map(([key,value]) => <div key={key}><strong>{key}</strong>: {value}</div>)}</details>}
+
             {extensionUi.widgets.map(([key, lines]) => <pre key={key}>{lines.join("\n")}</pre>)}
             {extensionUi.notices.map((notice) => <div className={`extension-notice ${notice.kind}`} key={notice.seq}>{notice.message}</div>)}
           </section>}
@@ -465,20 +509,6 @@ export default function App() {
                   <button className="danger-row" onClick={() => inspect("abort_retry")}><span><i>×</i><b>Aktywny retry</b></span><em>Przerwij</em></button>
                 </div>
               </article>
-              <article className="tool-card notification-card">
-                <div className="tool-card-head"><span>Powiadomienia mobilne</span><small>Firebase Cloud Messaging</small></div>
-                <div className={`notification-health ${notificationState}`}>
-                  <i /><span><b>{notificationLabel}</b><small>{status?.notifications
-                    ? `${status.notifications.registeredDevices} z ${status.notifications.pairedDevices} urządzeń ma token FCM`
-                    : "Brak danych diagnostycznych"}</small></span>
-                </div>
-                {status?.notifications?.lastDelivery && <p className="delivery-result">
-                  Ostatnia próba: {status.notifications.lastDelivery.successCount} dostarczono · {status.notifications.lastDelivery.failureCount} błędów
-                </p>}
-                <button className="ghost notification-test" disabled={notificationState !== "enabled" || !status?.notifications?.registeredDevices}
-                  onClick={() => void testNotification()}>Wyślij test na telefon</button>
-                {notificationState !== "enabled" && <small className="notification-help">Dodaj konto Firebase Admin do macOS Keychain i zrestartuj Control Service.</small>}
-              </article>
               {snippets.length > 0 && <article className="tool-card snippets-card">
                 <div className="tool-card-head"><span>Prompt snippets</span><small>{enabledSnippets.size} aktywne</small></div>
                 <div className="snippet-list">{snippets.map((snippet) => <label key={snippet.id}>
@@ -504,7 +534,7 @@ export default function App() {
             </div>
             {inspection !== undefined && <div className="inspection-result"><header><span>Wynik operacji</span><button className="ghost" onClick={() => setInspection(undefined)}>×</button></header><pre>{JSON.stringify(inspection, null, 2)}</pre></div>}
             <details className="command-reference"><summary><span>Komendy slash</span><small>{commands.length} dostępnych</small></summary><ul>{commands.map((command) => <li key={command.name}>
-              <button onClick={() => { chooseCommand(command); setAdvanced(false); historyPosition.current = -1; historyDraft.current = ""; setComposer(""); }}><code>/{command.name}</code><span>{command.description}</span><em>{command.source}</em></button>
+              <button onClick={() => { chooseCommand(command); setAdvanced(false); }}><code>/{command.name}</code><span>{command.description}</span><em>{command.source}</em></button>
             </li>)}</ul></details>
           </section>}
 

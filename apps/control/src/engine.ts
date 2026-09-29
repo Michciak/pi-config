@@ -148,7 +148,14 @@ export class EngineManager {
       case "set_model": return client.setModel(String(payload.provider), String(payload.modelId));
       case "cycle_model": return client.cycleModel();
       case "get_available_models": return client.getAvailableModels();
-      case "set_thinking_level": return client.setThinkingLevel(payload.level as any);
+      case "set_thinking_level": {
+        const levels = await client.getAvailableThinkingLevels();
+        if (!levels.includes(payload.level as any)) throw Object.assign(new Error(`This model supports: ${levels.join(", ") || "no configurable thinking"}`), {statusCode:400});
+        await client.setThinkingLevel(payload.level as any);
+        const state = await client.getState();
+        if (state.thinkingLevel !== payload.level) throw Object.assign(new Error(`Pi selected thinking level ${state.thinkingLevel}; requested level was not applied`), {statusCode:409});
+        return {level:state.thinkingLevel};
+      }
       case "cycle_thinking_level": return client.cycleThinkingLevel();
       case "get_available_thinking_levels": return client.getAvailableThinkingLevels();
       case "set_steering_mode": return client.setSteeringMode(payload.mode as any);
