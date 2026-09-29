@@ -39,17 +39,25 @@ def post(path: str) -> dict:
         return json.load(response)
 
 
-def wait_for_service(timeout: float = 12) -> dict:
+def wait_for_service(timeout: float = 60) -> dict:
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
+    next_notice = time.monotonic() + 10
     while time.monotonic() < deadline:
         try:
             with urllib.request.urlopen(STATUS_URL, timeout=2) as response:
                 return json.load(response)
         except (OSError, urllib.error.URLError, json.JSONDecodeError) as error:
             last_error = error
+            if time.monotonic() >= next_notice:
+                print("Waiting for Control Service to become ready…", flush=True)
+                next_notice = time.monotonic() + 10
             time.sleep(0.25)
-    raise RuntimeError(f"Control Service did not become ready: {last_error}")
+    raise RuntimeError(
+        f"Control Service did not become ready within {timeout:g}s: {last_error}. "
+        f"Check {HOME / '.pi/agent/web-control/control.stderr.log'} and control.stdout.log. "
+        "The service may still be starting; this does not stop it."
+    )
 
 
 def loaded() -> bool:
@@ -139,7 +147,10 @@ def main() -> None:
     previous = read_status()
     should_start_engine = args.start_engine or (previous is not None and previous.get("engine") == "running")
     mode = restart_service()
-    status = wait_for_service()
+    try:
+        status = wait_for_service()
+    except RuntimeError as error:
+        raise SystemExit(str(error)) from None
     if should_start_engine and status.get("engine") != "running":
         post("/engine/start")
         status = wait_for_service()
