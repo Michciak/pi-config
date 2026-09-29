@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, realpathSync, unlinkSync } from "node:fs";
+import { readFileSync, copyFileSync, existsSync, mkdirSync, realpathSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +24,7 @@ function now(): string { return new Date().toISOString(); }
 
 export class EngineManager {
   private statusValue: EngineStatus = "stopped";
+  private readonly childLive = new Map<string, any>();
   private readonly running = new Map<string, RuntimeSession>();
   private caffeinate?: ChildProcess;
   private readonly cliPath: string;
@@ -35,6 +36,8 @@ export class EngineManager {
     private readonly interactions: InteractionBroker,
   ) {
     const packageEntry = fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"));
+    this.store.db.exec("CREATE TABLE IF NOT EXISTS subagent_runs (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, metadata TEXT NOT NULL)");
+    this.store.db.exec("UPDATE subagent_runs SET metadata=json_set(metadata,'$.status','interrupted') WHERE json_extract(metadata,'$.status') IN ('running','starting','waiting')");
     this.cliPath = join(dirname(packageEntry), "cli.js");
   }
 
@@ -65,12 +68,28 @@ export class EngineManager {
 
   async restart(): Promise<void> { await this.stop("Engine restarted"); await this.start(); }
 
-  sessions(): SessionSummary[] { return this.store.sessions(); }
+  sessions(): SessionSummary[] {
+    const active = new Set((this.store.db.prepare("SELECT DISTINCT session_id FROM subagent_runs WHERE json_extract(metadata,'$.status') IN ('running','starting','waiting')").all() as any[]).map(row=>row.session_id));
+    return this.store.sessions().map(session=>active.has(session.id) && session.status === "idle" ? {...session,status:"running"} : session);
+  }
 
   subagents(id: string): SubagentProfile[] {
     const summary = this.store.session(id);
     if (!summary) throw Object.assign(new Error("Session not found"), { statusCode: 404 });
     return discoverSubagents(summary.workspace);
+  }
+
+  subagentRuns(id:string): any[] {
+    return (this.store.db.prepare("SELECT metadata FROM subagent_runs WHERE session_id=?").all(id) as any[]).map(row => {
+      const item=JSON.parse(row.metadata); let messages:any[]=[];
+      try {
+        const root=realpathSync(join(this.config.sessionsDir,"subagents"));
+        const path=realpathSync(item.sessionFile); const rel=relative(root,path);
+        if(rel.startsWith("..") || rel.startsWith("/")) throw new Error("outside");
+        messages=readFileSync(path,"utf8").split("\n").flatMap(line=>{try{const entry=JSON.parse(line);return entry.type==="message"?[entry.message]:[];}catch{return [];}}).slice(-200);
+      }catch{}
+      return {...item,messages,liveMessage:this.childLive.get(item.id)};
+    });
   }
 
   async createSession(input: { workspace: string; name?: string; sessionPath?: string }): Promise<SessionSummary> {
@@ -102,6 +121,7 @@ export class EngineManager {
     runtime.stopping = true;
     runtime.unsubscribe();
     await runtime.client.stop();
+    this.store.db.prepare("UPDATE subagent_runs SET metadata=json_set(metadata,'$.status','interrupted') WHERE session_id=? AND json_extract(metadata,'$.status') IN ('running','starting','waiting')").run(id);
     this.running.delete(id);
     this.updateSession(id, interrupted ? "interrupted" : "idle");
   }
@@ -114,6 +134,7 @@ export class EngineManager {
     if (summary.sessionFile && existsSync(summary.sessionFile)) {
       unlinkSync(this.resolveOwnedSession(summary.sessionFile));
     }
+    this.store.db.prepare("DELETE FROM subagent_runs WHERE session_id=?").run(id);
     if (!this.store.deleteSession(id)) throw Object.assign(new Error("Session not found"), { statusCode: 404 });
     this.events.publish("session.deleted", { id, name: summary.name }, id);
   }
@@ -261,6 +282,16 @@ export class EngineManager {
   }
 
   private handleUiRequest(sessionId: string, client: RpcClient, request: any): void {
+    if(request.method === "setWidget" && String(request.widgetKey).startsWith("remote-subagent:")) {
+      try {
+        const {liveMessage,...metadata}=JSON.parse(request.widgetLines?.[0] ?? "{}");
+        if(!metadata.id) return;
+        this.childLive.set(metadata.id,liveMessage);
+        this.store.db.prepare("INSERT OR REPLACE INTO subagent_runs(id,session_id,metadata) VALUES(?,?,?)").run(metadata.id,sessionId,JSON.stringify(metadata));
+        this.events.publish("subagent.updated",metadata,sessionId);
+      }catch{}
+      return;
+    }
     const respond = (response: Record<string, unknown>) => this.writeUiResponse(client, { type: "extension_ui_response", id: request.id, ...response });
     if (request.method === "confirm") {
       this.interactions.createApproval({ sessionId, externalRequestId: request.id,
@@ -293,6 +324,7 @@ export class EngineManager {
   }
 
   private updateSession(id: string, status: SessionStatus): void {
+    if(status === "error" || status === "interrupted") this.store.db.prepare("UPDATE subagent_runs SET metadata=json_set(metadata,'$.status','interrupted') WHERE session_id=? AND json_extract(metadata,'$.status') IN ('running','starting','waiting')").run(id);
     const runtime = this.running.get(id);
     const summary = runtime?.summary ?? this.store.session(id);
     if (!summary) return;

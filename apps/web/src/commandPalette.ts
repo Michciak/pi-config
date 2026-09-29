@@ -11,7 +11,7 @@ export function slashQuery(input: string): string | undefined {
   return value.slice(1).toLocaleLowerCase();
 }
 
-export function commandSuggestions(commands: SlashCommand[], input: string, limit = 8): SlashCommand[] {
+export function commandSuggestions(commands: SlashCommand[], input: string, limit = 1000): SlashCommand[] {
   const query = slashQuery(input);
   if (query === undefined) return [];
   return commands
@@ -28,3 +28,8 @@ export function commandSuggestions(commands: SlashCommand[], input: string, limi
 export function selectSlashCommand(name: string): string {
   return `/${name} `;
 }
+
+export const webCommands: SlashCommand[] = [
+ ["model","Wybierz model"],["settings","Ustawienia aplikacji i Pi"],["scope","Scope modeli"],["new","Utwórz sesję"],
+ ["compact","Kompaktuj kontekst"],["stats","Statystyki sesji"],["export","Eksportuj rozmowę"],["tree","Drzewo sesji"],["abort","Przerwij odpowiedź"],
+].map(([name,description])=>({name:name!,description:description!,source:"extension"}));

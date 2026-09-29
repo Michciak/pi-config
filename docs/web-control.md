@@ -217,3 +217,32 @@ Other package versions are left unchanged. Source: locally installed MIT package
 pi-cursor-sdk 0.3.10 (fitchmultz/pi-cursor-sdk), src/model-discovery.ts.
 Provider catalog mapping was tested offline; a live Cursor generation still
 requires deployment and a new/resumed session. SDK updates may replace the fix.
+
+### Subagent tabs, questions and usage
+
+RPC subagents publish metadata and current assistant output to Control Service.
+Tabs show the agent name, model and lifecycle, plus the last 200 durable messages
+from its managed Pi JSONL session. Current partial output remains in memory;
+SQLite stores only run metadata. Nested agents forward the same telemetry.
+Runs existing before this extension update do not have telemetry retroactively.
+After a Control restart unfinished runs are marked interrupted. Active child
+runs keep an otherwise idle parent session visibly running.
+
+Questions and approvals replace the composer until answered. Links lead to
+pending interactions in other sessions. The top editor handle grows the input
+when dragged upward and supports ArrowUp/ArrowDown for keyboard resizing.
+The footer separates estimated context occupancy from cumulative conversation
+tokens. The remote-metrics extension supplies context and quota. OpenRouter
+uses its official GET /api/v1/key endpoint (remaining key spending cap in USD,
+not account credits or a subscription time-window percentage). Other providers
+explicitly show unavailable; no provider auth reaches the browser. Refresh is
+available through /quota, with automatic updates after turns and model changes.
+Source: https://openrouter.ai/docs/api/api-reference/api-keys/get-current-key
+
+Slash completion no longer truncates the catalog at eight entries. RPC extension,
+skill and prompt commands are combined with supported web operations. TUI-only
+commands such as interactive terminal login are not emulated as model prompts.
+
+Validation: Control and web unit tests, extension TypeScript checks and builds.
+Live visual/end-to-end verification requires local deployment: the managed
+Codex shell cannot listen on the preview port (EPERM).

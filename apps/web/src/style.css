@@ -635,3 +635,16 @@ aside { overflow: auto; padding: 1rem; }
 .scope-option small { display: block; color: #7e899c; margin-top: 3px; }
 .thinking-control { position: relative; }
 .thinking-info { position: absolute; right: 0; top: 0; cursor: help; color: #939caf; font-size: 12px; }
+.layout { grid-template-columns: 250px minmax(0,1fr); }
+.chat-tabs { display:flex; gap:6px; overflow-x:auto; flex-shrink:0; padding:8px 14px; border-bottom:1px solid #ffffff12; }
+.chat-tabs button { flex-shrink:0; display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+.chat-tabs small,.child-heading { font-size:11px; color:#99a5b8; }
+.composer-interactions { max-height:40dvh; overflow:auto; border:1px solid #a78bfa55; border-radius:12px; padding:10px; }
+.composer-interactions .panel-heading { margin:0; padding:5px; }
+.composer-interactions .panel-heading h2 { font-size:14px; }
+.composer-footer { flex-wrap:wrap; }
+.usage-summary { display:flex; flex-wrap:wrap; gap:8px; margin-right:auto; align-items:center; color:#939caf; font-size:10px; }
+.quota-status { font-size:10px; min-height:24px; padding:3px 6px; }
+.composer-resizer { height:16px; text-align:center; cursor:ns-resize; touch-action:none; color:#8893a6; user-select:none; }
+.composer textarea { max-height:400px; }
+@media(max-width:900px){.layout {grid-template-columns:1fr;} .usage-summary{width:100%;}}

@@ -3,7 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import type { Approval, PiEvent, SessionSummary, UserQuestion } from "@pi-local/protocol";
 import type { PromptSnippet } from "@pi-local/prompt-snippets";
 import { ApiError, connectEvents, controlApi, exchangeHashToken, type ControlStatus, type SubagentProfile } from "./api.js";
-import { commandSuggestions, selectSlashCommand, type SlashCommand } from "./commandPalette.js";
+import { webCommands, commandSuggestions, selectSlashCommand, type SlashCommand } from "./commandPalette.js";
 import { Markdown } from "./Markdown.js";
 import { QuestionCard } from "./QuestionCard.js";
 import { reduceLiveBlocks, toolEventText, type LiveBlocks } from "./stream.js";
@@ -20,6 +20,10 @@ export default function App() {
   const [sessionName, setSessionName] = useState("");
   const [importPath, setImportPath] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
+  const [childRuns,setChildRuns] = useState<any[]>([]);
+  const [chatTab,setChatTab] = useState("main");
+  const [conversationStats,setConversationStats] = useState<any>();
+  const [editorHeight,setEditorHeight] = useState(100);
   const [messages, setMessages] = useState<any[]>([]);
   const [sessionState, setSessionState] = useState<any>();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -72,6 +76,7 @@ export default function App() {
   const selectedRef = useRef<string | undefined>(undefined);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [slashDismissed, setSlashDismissed] = useState(false);
+  const activeChildren = childRuns.filter(item => ["starting","running","waiting"].includes(item.status));
   const selected = status?.sessions.find((session) => session.id === selectedId);
   const interactionTarget = new URLSearchParams(location.search).get("interaction");
   const engineState = status?.engine ?? "offline";
@@ -116,14 +121,14 @@ export default function App() {
       controlApi.subagents(id).catch(() => []),
       controlApi.command<string[]>(id, "get_available_thinking_levels"),
     ]);
-    setScope(await controlApi.scope(id)); setThinkingLevels(nextThinkingLevels); setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands); setSubagents(nextSubagents);
+    setScope(await controlApi.scope(id)); setChildRuns(await controlApi.subagentRuns(id)); setConversationStats(await controlApi.command(id,"get_session_stats")); setThinkingLevels(nextThinkingLevels); setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands([...nextCommands,...webCommands.filter(item=>!nextCommands.some(command=>command.name===item.name))]); setSubagents(nextSubagents);
   }
 
   async function loadSession(id: string, resumeIfNeeded = true) {
     const switchingSession = selectedRef.current !== id;
     setSelectedId(id);
     if (switchingSession) {
-      setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
+      setChatTab("main"); setChildRuns([]); setLiveBlocks({}); setLiveUsage(undefined); setQueue({ steering: [], followUp: [] });
       setAdvanced(false); historyPosition.current = -1; historyDraft.current = ""; setComposer("");
     }
     try {
@@ -157,6 +162,7 @@ export default function App() {
         setSnippets(availableSnippets);
         await refresh();
         disconnect = connectEvents(0, (event) => {
+          if(event.type === "subagent.updated") { void refresh(); if(event.sessionId === selectedRef.current) void controlApi.subagentRuns(event.sessionId!).then(setChildRuns).catch(()=>{}); }
           setEvents((current) => [...current.slice(-499), event]);
           if (event.type === "engine.status_changed" || event.type.startsWith("session.")) void refresh();
           if (event.type.startsWith("user_question.") || event.type.startsWith("approval.")) void refresh();
@@ -209,10 +215,23 @@ export default function App() {
     }
     return { statuses: [...statuses], widgets: [...widgets], notices: notices.slice(-5) };
   }, [events, selectedId]);
+  const metrics = useMemo(() => {
+    const rows=extensionUi.widgets.find(([key])=>key==="remote-metrics")?.[1];
+    try{return JSON.parse(rows?.[0] ?? "{}");}catch{return {};}
+  },[extensionUi]);
+  const viewedChild=childRuns.find(item=>item.id===chatTab);
+  const sessionActivity = [...questions,...approvals].some(item=>item.sessionId===selectedId && item.status==="pending") ? "Czeka na Twoją odpowiedź" : activeChildren.length ? `Subagenci pracują (${activeChildren.length})` : selected?.status === "running" ? "Pi pracuje" : "Gotowa";
   const targetFirst = <T extends { id: string }>(items: T[]) => [...items].sort((left, right) =>
     left.id === interactionTarget ? -1 : right.id === interactionTarget ? 1 : 0);
   const pendingQuestions = targetFirst(questions.filter((item) => item.status === "pending"));
   const pendingApprovals = targetFirst(approvals.filter((item) => item.status === "pending"));
+  const awaitingHuman = [...pendingApprovals,...pendingQuestions].some(item=>item.sessionId === selectedId);
+  const previousAwaiting = useRef(false);
+  useEffect(() => {
+    if(awaitingHuman) requestAnimationFrame(()=>document.querySelector<HTMLElement>(".composer-interactions input, .composer-interactions textarea, .composer-interactions button")?.focus());
+    else if(previousAwaiting.current) focusComposer();
+    previousAwaiting.current=awaitingHuman;
+  },[awaitingHuman]);
   const skills = useMemo(() => commands.filter((command) => command.source === "skill"), [commands]);
   const suggestions = useMemo(() => commandSuggestions(commands, composer), [commands, composer]);
   const showSuggestions = !slashDismissed && suggestions.length > 0;
@@ -286,6 +305,15 @@ export default function App() {
 
   async function send() {
     if (!selectedId || !composer.trim()) return;
+    const builtin=composer.trim();
+    if(webCommands.some(item=>`/${item.name}`===builtin)) {
+      setComposer("");
+      if(builtin==="/model"){setModelPicker(true);return;}
+      if(builtin==="/settings" || builtin==="/scope"){if(builtin==="/scope")setSettingsTab("pi");void openSettings();return;}
+      if(builtin==="/new"){setNewSessionOpen(true);void browseFolders(workspace||workspaceRoot);return;}
+      const command=({"/compact":"compact","/stats":"get_session_stats","/export":"export_html","/tree":"get_tree","/abort":"abort"} as Record<string,string>)[builtin];
+      if(command){setAdvanced(true);void inspect(command);return;}
+    }
     const active = snippets.filter((item) => enabledSnippets.has(item.id));
     const message = [
       ...active.filter((item) => item.placement === "prepend").map((item) => item.body),
@@ -464,7 +492,7 @@ export default function App() {
         {selected ? <>
           <div className="conversation-head">
             <div className="session-identity">
-              <div className="session-kicker"><span><i className={`session-dot ${selected.status}`} />Aktywna sesja</span><b>{selected.status}</b></div>
+              <div className="session-kicker"><span><i className={`session-dot ${selected.status}`} />Aktywna sesja</span><b>{sessionActivity}</b></div>
               <h1>{selected.name}</h1>
               <p title={selected.workspace}><span>⌁</span>{selected.workspace}</p>
             </div>
@@ -489,7 +517,7 @@ export default function App() {
 
           {(extensionUi.statuses.length > 0 || extensionUi.widgets.length > 0 || extensionUi.notices.length > 0) && <section className="extension-ui">
 
-            {extensionUi.widgets.map(([key, lines]) => <pre key={key}>{lines.join("\n")}</pre>)}
+            {extensionUi.widgets.filter(([key]) => key !== "remote-metrics" && key !== "rpc-subagents").map(([key, lines]) => <pre key={key}>{lines.join("\n")}</pre>)}
             {extensionUi.notices.map((notice) => <div className={`extension-notice ${notice.kind}`} key={notice.seq}>{notice.message}</div>)}
           </section>}
 
@@ -545,7 +573,9 @@ export default function App() {
             </li>)}</ul></details>
           </section>}
 
-          <section className="messages" onScroll={event => { const el = event.currentTarget; followOutput.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
+          <nav className="chat-tabs" aria-label="Karty czatu"><button className={chatTab==="main"?"":"ghost"} onClick={()=>setChatTab("main")}>Orchestrator</button>{childRuns.map(child=><button className={chatTab===child.id?"":"ghost"} key={child.id} onClick={()=>setChatTab(child.id)}><strong>{child.name}</strong><small>{child.model} · {child.status}</small></button>)}</nav>
+          {viewedChild && <section className="messages child-messages"><div className="child-heading">{viewedChild.name} · {viewedChild.model} · {viewedChild.status}<p>Podgląd subagenta. Wiadomości z pola poniżej trafiają do orchestratora.</p></div>{viewedChild.messages.map((message:any,index:number)=><article className="message" key={index}><div className="role">{message.toolName ?? message.role}</div><MessageContent message={message} workspace={selected.workspace} /></article>)}{viewedChild.liveMessage && <article className="message"><MessageContent message={viewedChild.liveMessage} workspace={selected.workspace}/></article>}</section>}
+          <section className="messages" style={{display:viewedChild ? "none" : undefined}} onScroll={event => { const el = event.currentTarget; followOutput.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
             {messages.map((message, index) => <article className={`message ${message.role ?? "system"}`} key={message.id ?? index}>
               <div className="role">{({user:"Ty", assistant:"Pi", toolResult:"Narzędzie", system:"System"} as Record<string,string>)[message.role] ?? message.role ?? message.type}</div><MessageContent message={message} workspace={selected.workspace} />
             </article>)}
@@ -566,12 +596,25 @@ export default function App() {
           </section>
 
           <section className="composer">
+            {[...pendingQuestions,...pendingApprovals].some(item=>item.sessionId===selectedId) && <>      <div className="composer-interactions">
+        <div className="panel-heading attention-heading"><div><span>ODPOWIEDZ, ABY KONTYNUOWAĆ</span><h2>Wymaga uwagi</h2></div><b>{[...pendingQuestions,...pendingApprovals].filter(item=>item.sessionId===selectedId).length}</b></div>
+        {pendingApprovals.filter(item => item.sessionId === selectedId).map((approval) => <article id={`interaction-${approval.id}`} className="interaction approval" key={approval.id}>
+          <div className="interaction-tag">ZATWIERDZENIE</div><h3>{approval.title}</h3><pre>{approval.message}</pre>
+          <div className="interaction-actions"><button className="danger ghost" onClick={() => controlApi.decideApproval(approval.id, false).then(refresh)}>Odrzuć</button>
+            <button onClick={() => controlApi.decideApproval(approval.id, true).then(refresh)}>Zatwierdź</button></div>
+        </article>)}
+        {pendingQuestions.filter(item => item.sessionId === selectedId).map((question) => <QuestionCard key={question.id} question={question}
+          onAnswer={(answers) => controlApi.answerQuestion(question.id, answers).then(() => refresh())}
+          onCancel={() => controlApi.cancelQuestion(question.id).then(() => refresh())} />)}
+      </div></>}
+            {[...pendingQuestions,...pendingApprovals].filter(item=>item.sessionId!==selectedId).map(item => <button className="ghost other-session-question" key={item.id} onClick={()=>void loadSession(item.sessionId)}>Pytanie w sesji {status?.sessions.find(s=>s.id===item.sessionId)?.name ?? item.sessionId} →</button>)}
             {(queue.steering.length > 0 || queue.followUp.length > 0) && <div className="queue-state">
               {queue.steering.map((item, index) => <span key={`s-${index}`}>Steer: {item}</span>)}
               {queue.followUp.map((item, index) => <span key={`f-${index}`}>Follow-up: {item}</span>)}
             </div>}
             {images.length > 0 && <div className="attachments">{images.length} obraz(y)</div>}
-            <div className="composer-input">
+            <div className="composer-input" style={{display:awaitingHuman ? "none" : undefined}}>
+              <div className="composer-resizer" role="separator" aria-label="Wysokość pola wiadomości" aria-orientation="horizontal" tabIndex={0} onKeyDown={event=>{if(event.key==="ArrowUp"||event.key==="ArrowDown"){event.preventDefault();setEditorHeight(h=>Math.max(72,Math.min(400,h+(event.key==="ArrowUp"?20:-20))));}}} onPointerDown={event=>{event.currentTarget.setPointerCapture(event.pointerId);event.currentTarget.dataset.startY=String(event.clientY);event.currentTarget.dataset.height=String(editorHeight);}} onPointerMove={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))setEditorHeight(Math.max(72,Math.min(400,Number(event.currentTarget.dataset.height)+Number(event.currentTarget.dataset.startY)-event.clientY)));}} onPointerUp={event=>event.currentTarget.releasePointerCapture(event.pointerId)}>━</div>
               {showSuggestions && <div id="slash-suggestions" className="slash-suggestions" role="listbox" aria-label="Dostępne komendy slash">
                 <header><span>Komendy Pi</span><small>↑↓ wybierz · Enter zatwierdź · Esc zamknij</small></header>
                 {suggestions.map((command, index) => <button type="button" role="option" aria-selected={index === suggestionIndex}
@@ -582,7 +625,7 @@ export default function App() {
                   <em>{command.source === "skill" ? "skill" : command.source === "prompt" ? "prompt" : "extension"}</em>
                 </button>)}
               </div>}
-              <textarea ref={composerRef} value={composer} rows={3} placeholder="Napisz do Pi…  / komendy · ↑↓ historia" onChange={(event) => { setComposer(event.target.value); historyPosition.current = -1; setSlashDismissed(false); }}
+              <textarea style={{height:editorHeight,resize:"none"}} ref={composerRef} value={composer} rows={3} placeholder="Napisz do Pi…  / komendy · ↑↓ historia" onChange={(event) => { setComposer(event.target.value); historyPosition.current = -1; setSlashDismissed(false); }}
                 aria-autocomplete="list" aria-controls={showSuggestions ? "slash-suggestions" : undefined}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void send(); return; }
@@ -603,31 +646,14 @@ export default function App() {
                   else if (event.key === "Escape") { event.preventDefault(); setSlashDismissed(true); }
                 }} />
             </div>
-            <div><label className="attach">＋ Obraz<input type="file" accept="image/*" multiple onChange={(event) => void chooseImages(event.target.files)} /></label>
+            <div className="composer-footer" style={{display:awaitingHuman ? "none" : undefined}}><div className="usage-summary"><span title="Szacowane użycie kontekstu z Pi">Kontekst: {(metrics.context ?? conversationStats?.contextUsage)?.tokens == null ? "—" : (metrics.context ?? conversationStats?.contextUsage).tokens.toLocaleString()} / {(metrics.context ?? conversationStats?.contextUsage)?.contextWindow?.toLocaleString() ?? sessionState?.model?.contextWindow?.toLocaleString() ?? "—"}</span><span>Rozmowa: {messages.length} wiadomości · {conversationStats?.tokens?.total?.toLocaleString() ?? "—"} tok.</span><button className="ghost quota-status" title="Quota providera; kliknij, aby odświeżyć" onClick={()=>selectedId && controlApi.command(selectedId,"prompt",{message:"/quota"}).catch(cause=>setError(String(cause)))}>Quota: {metrics.quota?.state === "available" ? metrics.quota.remaining == null ? "bez limitu klucza" : `$${Number(metrics.quota.remaining).toFixed(2)}` : "brak danych"}</button></div><label className="attach">＋ Obraz<input type="file" accept="image/*" multiple onChange={(event) => void chooseImages(event.target.files)} /></label>
               <select value={delivery} onChange={(event) => setDelivery(event.target.value as any)}><option value="prompt">Prompt</option><option value="steer">Steer</option><option value="follow_up">Follow-up</option></select>
               <button className="danger ghost" onClick={() => inspect("abort")}>Przerwij</button><button onClick={send}>Wyślij ⌘↵</button></div>
           </section>
         </> : <div className="empty"><span>π</span><div className="eyebrow">READY WHEN YOU ARE</div><h1>Wybierz lub utwórz sesję</h1><p>{status?.engine === "running" ? "Pi Engine działa. Otwórz sesję z panelu lub rozpocznij nową." : "Uruchom Pi Engine, aby rozpocząć pracę."}</p></div>}
       </main>
 
-      <aside className="interaction-panel">
-        <div className="panel-heading attention-heading"><div><span>INBOX</span><h2>Wymaga uwagi</h2></div><b>{pendingQuestions.length + pendingApprovals.length}</b></div>
-        {pendingApprovals.map((approval) => <article id={`interaction-${approval.id}`} className="interaction approval" key={approval.id}>
-          <div className="interaction-tag">ZATWIERDZENIE</div><h3>{approval.title}</h3><pre>{approval.message}</pre>
-          <div className="interaction-actions"><button className="danger ghost" onClick={() => controlApi.decideApproval(approval.id, false).then(refresh)}>Odrzuć</button>
-            <button onClick={() => controlApi.decideApproval(approval.id, true).then(refresh)}>Zatwierdź</button></div>
-        </article>)}
-        {pendingQuestions.map((question) => <QuestionCard key={question.id} question={question}
-          onAnswer={(answers) => controlApi.answerQuestion(question.id, answers).then(() => refresh())}
-          onCancel={() => controlApi.cancelQuestion(question.id).then(() => refresh())} />)}
-        {pendingQuestions.length + pendingApprovals.length === 0 && <p className="muted">Brak oczekujących pytań.</p>}
-        {(questions.some((item) => item.status !== "pending") || approvals.some((item) => item.status !== "pending")) &&
-          <details className="interaction-history"><summary>Ostatnio rozstrzygnięte</summary>
-            {[...questions.filter((item) => item.status !== "pending"), ...approvals.filter((item) => item.status !== "pending")]
-              .sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20).map((item) =>
-                <div key={item.id}><span>{"question" in item ? item.question : item.title}</span><small>{item.status}</small></div>)}
-          </details>}
-      </aside>
+
     </div>
   </div>;
 }

@@ -49,6 +49,7 @@ def main() -> None:
     backup_root.mkdir(parents=True, exist_ok=True)
     subprocess.check_call([sys.executable, str(REPO / "scripts/patch-cursor-thinking.py"), str(PI_AGENT), str(backup_root)])
     assets = [
+        (REPO / "extensions/remote-metrics.ts", PI_AGENT / "extensions/remote-metrics.ts"),
         (REPO / "extensions/ask-user-question.ts", PI_AGENT / "extensions/ask-user-question.ts"),
         (REPO / "extensions/ask-user-question-contract.ts", PI_AGENT / "extensions/ask-user-question-contract.ts"),
         (REPO / "extensions/bash-guard/index.ts", PI_AGENT / "extensions/bash-guard/index.ts"),

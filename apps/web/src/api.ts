@@ -77,6 +77,7 @@ export const controlApi = {
   resumeSession: (id: string) => api<SessionSummary>(`/sessions/${id}/resume`, { method: "POST" }),
   stopSession: (id: string) => api(`/sessions/${id}/stop`, { method: "POST" }),
   deleteSession: (id: string) => api<void>(`/sessions/${id}`, { method: "DELETE" }),
+  subagentRuns: (id:string) => api<any[]>(`/sessions/${id}/subagent-runs`),
   subagents: (id: string) => api<SubagentProfile[]>(`/sessions/${id}/subagents`),
   command: <T = unknown>(id: string, command: string, payload: Record<string, unknown> = {}) =>
     api<{ result: T }>(`/sessions/${id}/commands`, { method: "POST", body: JSON.stringify({ command, payload } satisfies SessionCommand) }).then((value) => value.result),

@@ -18,6 +18,7 @@ export class StateStore {
     this.db = new DatabaseSync(path);
     this.db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;");
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS subagent_runs (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, metadata TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS events (
         seq INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, session_id TEXT,

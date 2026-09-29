@@ -25,3 +25,8 @@ test("filters commands as letters are entered and ranks prefixes first", () => {
 test("selection leaves the composer ready for arguments", () => {
   assert.equal(selectSlashCommand("skill:web-debug"), "/skill:web-debug ");
 });
+
+test("does not silently truncate the slash catalog to eight commands", () => {
+ const commands = Array.from({length:20}, (_,index) => ({name:`command-${index}`,source:"extension" as const}));
+ assert.equal(commandSuggestions(commands,"/").length,20);
+});

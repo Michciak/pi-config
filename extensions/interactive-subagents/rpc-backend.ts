@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, unlinkSync } from "node:fs";
-import { createServer, type Server, type Socket } from "node:net";
+import { createServer, type Server, Socket } from "node:net";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RpcClient, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { selectSubagentModel, ref as modelRef } from "./routing.ts";
 
 interface AgentProfile {
@@ -30,6 +30,8 @@ interface RunningAgent {
   sessionFile?: string;
   status: "starting" | "running" | "waiting" | "completed" | "error";
   startedAt: number;
+  liveMessage?: any;
+  lastPublish?: number;
   result?: string;
   error?: string;
 }
@@ -110,6 +112,7 @@ function uniqueName(requested: string): string {
 
 function updateWidget(): void {
   if (!context) return;
+  for (const item of running.values()) context.ui.setWidget(`remote-subagent:${item.id}`, [JSON.stringify({id:item.id,name:item.name,agent:item.agent,model:item.model,status:item.status,sessionFile:item.sessionFile,liveMessage:item.liveMessage})]);
   const rows = [...running.values()].filter((item) => item.status !== "completed").map((item) =>
     `${item.status === "running" ? "●" : item.status === "waiting" ? "?" : "○"} ${item.name} · ${item.agent} · ${item.status}`,
   );
@@ -181,7 +184,7 @@ function registerAskQuestion(pi: ExtensionAPI): void {
     description: "Ask your orchestrator one free-form question when you cannot safely continue without its decision.",
     parameters: Type.Object({ question: Type.String({ minLength: 1 }) }),
     async execute(toolCallId, params, signal) {
-      return new Promise((resolvePromise) => {
+      return new Promise<{content: Array<{type:"text";text:string}>;details:{status:string}}>((resolvePromise) => {
         const socket = new Socket();
         let buffer = "";
         let settled = false;
@@ -239,6 +242,8 @@ function childArgs(agent: RunningAgent, sessionFile: string | undefined, ctx: Ex
 
 function forwardChildUi(pi: ExtensionAPI, agent: RunningAgent, client: RpcClient, request: any): void {
   const childKey = `${agent.name}:${request.statusKey ?? request.widgetKey ?? request.method}`;
+  if(request.method === "setWidget" && String(request.widgetKey).startsWith("remote-subagent:")) { context?.ui.setWidget(request.widgetKey,request.widgetLines); return; }
+  if(request.method === "setWidget" && request.widgetKey === "remote-metrics") return;
   if (request.method === "setStatus") context?.ui.setStatus(childKey, request.statusText ? `[${agent.name}] ${request.statusText}` : undefined);
   else if (request.method === "setWidget") context?.ui.setWidget(childKey, request.widgetLines?.map((line: string) => `[${agent.name}] ${line}`));
   else if (request.method === "notify") context?.ui.notify(`[${agent.name}] ${request.message}`, request.notifyType);
@@ -280,6 +285,8 @@ async function runAgent(pi: ExtensionAPI, agent: RunningAgent, prompt: string, s
   agent.client = client;
   const settled = new Promise<void>((resolvePromise, reject) => {
     const unsubscribe = client.onEvent((event: any) => {
+      if(event.type === "message_update") { agent.liveMessage=event.message ?? event.assistantMessageEvent?.partial; if(Date.now()-(agent.lastPublish??0)>300){agent.lastPublish=Date.now();updateWidget();} }
+      if(event.type === "message_end") {agent.liveMessage=undefined;updateWidget();}
       if (event.type === "agent_start") { agent.status = "running"; updateWidget(); }
       if (event.type === "extension_ui_request") forwardChildUi(pi, agent, client, event);
       if (event.type === "agent_settled") { unsubscribe(); resolvePromise(); }
@@ -292,6 +299,8 @@ async function runAgent(pi: ExtensionAPI, agent: RunningAgent, prompt: string, s
     child?.once("exit", (code: unknown) => (agent as any).rejectExit?.(new Error(`Nested Pi exited before settling (${code})`)));
     const state = await client.getState();
     agent.sessionFile = state.sessionFile;
+    if(state.model) agent.model = `${state.model.provider}/${state.model.id}`;
+    updateWidget();
     await client.prompt(prompt);
     await settled;
     agent.result = await client.getLastAssistantText() ?? "Subagent finished without a text result.";
@@ -347,7 +356,7 @@ export function registerRpcSubagents(pi: ExtensionAPI): void {
     }),
     async execute(_id, params, _signal, _update, ctx) {
       const profile = profiles().find((item) => item.name === params.agent);
-      if (!profile) return { isError: true, content: [{ type: "text" as const, text: `Unknown or disallowed agent: ${params.agent}` }] };
+      if (!profile) return { isError: true, details: {status:"error", name:params.name ?? "unknown"}, content: [{ type: "text" as const, text: `Unknown or disallowed agent: ${params.agent}` }] };
       const name = uniqueName(params.name?.trim() || profile.name);
       const model = selectSubagentModel(params.task, ctx, profile.name, params.model);
       const item: RunningAgent = {
@@ -367,7 +376,7 @@ export function registerRpcSubagents(pi: ExtensionAPI): void {
     parameters: Type.Object({ name: Type.String(), message: Type.String({ minLength: 1 }) }),
     async execute(_id, params) {
       const item = running.get(params.name);
-      if (!item) return { isError: true, content: [{ type: "text" as const, text: `Unknown subagent: ${params.name}` }] };
+      if (!item) return { isError: true, details: {status:"error", name:params.name ?? "unknown"}, content: [{ type: "text" as const, text: `Unknown subagent: ${params.name}` }] };
       const pending = questions.get(item.name) ?? [];
       const question = pending.shift();
       if (question) {
@@ -380,7 +389,7 @@ export function registerRpcSubagents(pi: ExtensionAPI): void {
         await item.client.steer(params.message);
         return { content: [{ type: "text" as const, text: `Steered subagent "${item.name}".` }], details: { status: "steered", name: item.name } };
       }
-      if (!item.sessionFile) return { isError: true, content: [{ type: "text" as const, text: `Subagent "${item.name}" has no resumable session.` }] };
+      if (!item.sessionFile) return { isError: true, details: {status:"error", name:params.name ?? "unknown"}, content: [{ type: "text" as const, text: `Subagent "${item.name}" has no resumable session.` }] };
       item.task = params.message; item.startedAt = Date.now(); item.result = undefined; item.error = undefined;
       void runAgent(pi, item, params.message, item.sessionFile);
       return { content: [{ type: "text" as const, text: `Resumed subagent "${item.name}" through Pi RPC.` }], details: { status: "resumed", name: item.name } };
