@@ -49,6 +49,11 @@ export default function App() {
   const [slashDismissed, setSlashDismissed] = useState(false);
   const selected = status?.sessions.find((session) => session.id === selectedId);
   const interactionTarget = new URLSearchParams(location.search).get("interaction");
+  const engineState = status?.engine ?? "offline";
+  const engineLabel = {
+    offline: "Offline", stopped: "Zatrzymany", starting: "Uruchamianie",
+    running: "Działa", stopping: "Zatrzymywanie", crashed: "Błąd",
+  }[engineState];
 
   useEffect(() => { selectedRef.current = selectedId; }, [selectedId]);
 
@@ -294,8 +299,9 @@ export default function App() {
     <header className="app-header">
       <div className="brand"><span className="logo">π</span><span className="brand-copy"><strong>Pi Remote</strong><small>Local AI workspace</small></span></div>
       <div className="status-row">
-        <span className={`dot ${connected ? "ok" : "bad"}`} />Control
-        <span className={`pill ${status?.engine}`}>{status?.engine ?? "offline"}</span>
+        <span className={`engine-status ${engineState}`} title={status ? "Control Service dostępny" : "Brak połączenia z Control Service"}>
+          <i className="dot" /><span>Pi Engine</span><b>{engineLabel}</b>
+        </span>
         <button className="ghost" onClick={startPairing}>Telefon</button>
         <button onClick={() => engineAction("start")} disabled={status?.engine === "running"}>Start</button>
         <button className="ghost" onClick={() => engineAction("restart")} disabled={status?.engine !== "running"}>Restart</button>
@@ -368,7 +374,7 @@ export default function App() {
             </div>
           </div>
 
-          {(skills.length > 0 || subagents.length > 0) && <nav className="capability-toolbar" aria-label="Szybkie wywołania skilli i subagentów">
+          {!advanced && (skills.length > 0 || subagents.length > 0) && <nav className="capability-toolbar" aria-label="Szybkie wywołania skilli i subagentów">
             {skills.length > 0 && <div className="capability-group"><span>Skills</span><div>{skills.map((skill) => <button key={skill.name} title={skill.description} onClick={() => chooseSkill(skill)}>
               <i>✦</i>{skill.name.replace(/^skill:/, "")}
             </button>)}</div></div>}

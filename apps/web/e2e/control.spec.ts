@@ -57,6 +57,7 @@ async function mockControl(page: Page) {
 test("submits text, single-select, multi-select and custom Other answers", async ({ page }) => {
   const answers = await mockControl(page);
   await page.goto("/");
+  await expect(page.locator(".engine-status.stopped")).toContainText("Zatrzymany");
   await expect(page.getByText("Wymaga uwagi")).toBeVisible();
 
   const textCard = page.locator("#interaction-text");
@@ -147,6 +148,7 @@ test("resumes a stopped RPC session and exposes contextual launchers", async ({ 
     await toolbar.getByRole("button", { name: "scout" }).click();
     await expect(composer).toHaveValue(/profilem "scout"/);
     await page.getByRole("button", { name: "Narzędzia" }).click();
+    await expect(toolbar).toBeHidden();
     await expect(page.getByText("Narzędzia sesji")).toBeVisible();
     await expect(page.getByText("Automatyzacja", { exact: true })).toBeVisible();
     await expect(page.getByText("Bezpośredni bash", { exact: true })).toBeVisible();
