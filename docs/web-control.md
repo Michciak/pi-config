@@ -72,6 +72,12 @@ that root are rejected.
    launchctl kickstart -k gui/$(id -u)/pl.michalkozinski.pi-control
    ```
 
+   Run the Keychain command from a normal interactive Terminal and approve the
+   macOS prompt. The script passes the credential through standard input and
+   never includes it in an error or command-line diagnostic. After restarting,
+   open **Narzędzia sesji → Powiadomienia mobilne** to verify that Firebase is
+   active and send an end-to-end test notification.
+
 3. Create the APK signing key outside the repository and build/install:
 
    ```sh

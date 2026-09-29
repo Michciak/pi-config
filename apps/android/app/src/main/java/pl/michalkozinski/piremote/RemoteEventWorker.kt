@@ -21,6 +21,9 @@ class RemoteEventWorker(context: Context, params: WorkerParameters) : Worker(con
                 "engine.status_changed" -> {
                     Notifications.engine(applicationContext, payload.optString("status", "unknown"))
                 }
+                "notification.test" -> Notifications.test(applicationContext,
+                    payload.optString("title", "Pi Remote działa"),
+                    payload.optString("message", "Powiadomienia docierają do telefonu."))
                 "user_question.created" -> Notifications.question(applicationContext,
                     payload.getString("id"), if (payload.has("sessionId")) payload.optString("sessionId") else null)
             }

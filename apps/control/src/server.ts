@@ -66,11 +66,22 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
     engine: engine.status(),
     sessions: engine.sessions(),
     firebase: notifier.status(),
+    notifications: notifier.diagnostics(),
     version: "0.1.0",
   }));
   app.get("/api/v1/config", async () => ({ workspaceRoot: config.workspaceRoot, port: config.port }));
   app.get("/api/v1/openapi.json", async () => app.swagger());
   app.get("/api/v1/snippets", async () => loadSnippets(config.snippetsDir));
+  app.post("/api/v1/notifications/test", async (_request, reply) => {
+    const event = events.publish("notification.test", {
+      title: "Pi Remote działa",
+      message: "Powiadomienia z Maca docierają do telefonu.",
+    });
+    const delivery = await notifier.send(String(event.seq));
+    if (!delivery.attempted) return reply.code(409).send({ error: delivery.error, delivery });
+    if (delivery.successCount === 0) return reply.code(502).send({ error: delivery.error ?? "FCM rejected the notification", delivery });
+    return { delivered: true, delivery };
+  });
 
   app.post("/api/v1/auth/exchange", async (request: any, reply) => {
     const session = store.exchangeWebToken(String(request.body?.token ?? ""));

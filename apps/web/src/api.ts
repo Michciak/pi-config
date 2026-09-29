@@ -11,6 +11,24 @@ export interface SubagentProfile {
   source: "global" | "project";
 }
 
+export interface NotificationDelivery {
+  eventId: string;
+  attemptedAt: string;
+  attempted: boolean;
+  successCount: number;
+  failureCount: number;
+  error?: string;
+}
+
+export type ControlStatus = ServerStatus & {
+  notifications?: {
+    state: "enabled" | "disabled" | "error";
+    pairedDevices: number;
+    registeredDevices: number;
+    lastDelivery?: NotificationDelivery;
+  };
+};
+
 const SESSION_KEY = "pi-web-session";
 let token = sessionStorage.getItem(SESSION_KEY) ?? "";
 
@@ -46,11 +64,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const controlApi = {
-  status: () => api<ServerStatus>("/status"),
+  status: () => api<ControlStatus>("/status"),
   config: () => api<{ workspaceRoot: string }>("/config"),
   snippets: () => api<PromptSnippet[]>("/snippets"),
   engine: (action: "start" | "stop" | "restart") => api(`/engine/${action}`, { method: "POST" }),
   restartControl: () => api("/control/restart", { method: "POST" }),
+  testNotification: () => api<{ delivered: true; delivery: NotificationDelivery }>("/notifications/test", { method: "POST" }),
   startPairing: () => api<{ code: string; expiresAt: number; host: string; deepLink: string }>("/pairing/start", { method: "POST" }),
   sessions: () => api<SessionSummary[]>("/sessions"),
   createSession: (workspace: string, name: string) => api<SessionSummary>("/sessions", { method: "POST", body: JSON.stringify({ workspace, name }) }),

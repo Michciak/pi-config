@@ -175,7 +175,15 @@ class MainActivity : AppCompatActivity() {
         executor.execute {
             runCatching { api.get("/api/v1/status") }
                 .onSuccess { result -> runOnUiThread {
-                    status.text = "Control Service: online\nPi Engine: ${result.optString("engine", "unknown")}\n${api.baseUrl}"
+                    val notifications = result.optJSONObject("notifications")
+                    val pushState = notifications?.optString("state", result.optString("firebase", "unknown"))
+                        ?: result.optString("firebase", "unknown")
+                    val registered = notifications?.optInt("registeredDevices", 0) ?: 0
+                    val permission = if (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
+                            this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                        ) "dozwolone" else "zablokowane"
+                    status.text = "Control Service: online\nPi Engine: ${result.optString("engine", "unknown")}" +
+                        "\nPowiadomienia: $pushState · urządzenia FCM: $registered · uprawnienie: $permission\n${api.baseUrl}"
                 } }
                 .onFailure { error -> runOnUiThread { status.text = "Mac jest nieosiągalny: ${error.message}" } }
         }

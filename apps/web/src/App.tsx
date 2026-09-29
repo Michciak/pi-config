@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import type { Approval, PiEvent, ServerStatus, SessionSummary, UserQuestion } from "@pi-local/protocol";
+import type { Approval, PiEvent, SessionSummary, UserQuestion } from "@pi-local/protocol";
 import type { PromptSnippet } from "@pi-local/prompt-snippets";
-import { ApiError, connectEvents, controlApi, exchangeHashToken, type SubagentProfile } from "./api.js";
+import { ApiError, connectEvents, controlApi, exchangeHashToken, type ControlStatus, type SubagentProfile } from "./api.js";
 import { commandSuggestions, selectSlashCommand, type SlashCommand } from "./commandPalette.js";
 import { Markdown, messageText } from "./Markdown.js";
 import { QuestionCard } from "./QuestionCard.js";
@@ -11,7 +11,7 @@ import { reduceLiveBlocks, toolEventText, type LiveBlocks } from "./stream.js";
 type Model = { provider: string; id: string };
 
 export default function App() {
-  const [status, setStatus] = useState<ServerStatus | null>(null);
+  const [status, setStatus] = useState<ControlStatus | null>(null);
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [workspace, setWorkspace] = useState("");
   const [sessionName, setSessionName] = useState("");
@@ -54,6 +54,8 @@ export default function App() {
     offline: "Offline", stopped: "Zatrzymany", starting: "Uruchamianie",
     running: "Działa", stopping: "Zatrzymywanie", crashed: "Błąd",
   }[engineState];
+  const notificationState = status?.notifications?.state ?? status?.firebase ?? "disabled";
+  const notificationLabel = { enabled: "Aktywne", disabled: "Nieskonfigurowane", error: "Błąd konfiguracji" }[notificationState];
 
   useEffect(() => { selectedRef.current = selectedId; }, [selectedId]);
 
@@ -274,6 +276,11 @@ export default function App() {
     catch (cause) { setError(String(cause)); }
   }
 
+  async function testNotification() {
+    try { setInspection(await controlApi.testNotification()); await refresh(); }
+    catch (cause) { setError(String(cause)); await refresh(); }
+  }
+
   async function changeModel(value: string) {
     if (!selectedId || !value) return;
     const [provider, ...modelId] = value.split("/");
@@ -412,6 +419,20 @@ export default function App() {
                   <button onClick={() => inspect("clear_queue")}><span><i>≡</i><b>Kolejka</b></span><em>Wyczyść</em></button>
                   <button className="danger-row" onClick={() => inspect("abort_retry")}><span><i>×</i><b>Aktywny retry</b></span><em>Przerwij</em></button>
                 </div>
+              </article>
+              <article className="tool-card notification-card">
+                <div className="tool-card-head"><span>Powiadomienia mobilne</span><small>Firebase Cloud Messaging</small></div>
+                <div className={`notification-health ${notificationState}`}>
+                  <i /><span><b>{notificationLabel}</b><small>{status?.notifications
+                    ? `${status.notifications.registeredDevices} z ${status.notifications.pairedDevices} urządzeń ma token FCM`
+                    : "Brak danych diagnostycznych"}</small></span>
+                </div>
+                {status?.notifications?.lastDelivery && <p className="delivery-result">
+                  Ostatnia próba: {status.notifications.lastDelivery.successCount} dostarczono · {status.notifications.lastDelivery.failureCount} błędów
+                </p>}
+                <button className="ghost notification-test" disabled={notificationState !== "enabled" || !status?.notifications?.registeredDevices}
+                  onClick={() => void testNotification()}>Wyślij test na telefon</button>
+                {notificationState !== "enabled" && <small className="notification-help">Dodaj konto Firebase Admin do macOS Keychain i zrestartuj Control Service.</small>}
               </article>
               {snippets.length > 0 && <article className="tool-card snippets-card">
                 <div className="tool-card-head"><span>Prompt snippets</span><small>{enabledSnippets.size} aktywne</small></div>

@@ -12,7 +12,15 @@ test("serves OpenAPI and applies exactly-once question responses", async () => {
   const directory = mkdtempSync(join(tmpdir(), "pi-api-"));
   const store = new StateStore(join(directory, "state.sqlite"));
   const events = new EventBus(store);
-  const notifier = { status: () => "disabled", send: async () => {} } as any;
+  let notificationEventId: string | undefined;
+  const notifier = {
+    status: () => "enabled",
+    diagnostics: () => ({ state: "enabled", pairedDevices: 1, registeredDevices: 1 }),
+    send: async (eventId: string) => {
+      notificationEventId = eventId;
+      return { eventId, attemptedAt: new Date().toISOString(), attempted: true, successCount: 1, failureCount: 0 };
+    },
+  } as any;
   const interactions = new InteractionBroker(store, events, notifier);
   let deletedId: string | undefined;
   const engine = {
@@ -29,6 +37,13 @@ test("serves OpenAPI and applies exactly-once question responses", async () => {
     const openapi = await app.inject({ method: "GET", url: "/api/v1/openapi.json", headers: { host: "127.0.0.1:3784" } });
     assert.equal(openapi.statusCode, 200);
     assert.equal(openapi.json().info.title, "Pi Local Control API");
+    const status = await app.inject({ method: "GET", url: "/api/v1/status", headers: { host: "127.0.0.1:3784" } });
+    assert.equal(status.json().notifications.registeredDevices, 1);
+    const notification = await app.inject({ method: "POST", url: "/api/v1/notifications/test", headers: { host: "127.0.0.1:3784" } });
+    assert.equal(notification.statusCode, 200);
+    assert.equal(notification.json().delivered, true);
+    assert.ok(notificationEventId);
+    assert.equal(store.event(Number(notificationEventId))?.type, "notification.test");
     const question = interactions.createQuestion({ sessionId: "session", source: { kind: "orchestrator" }, question: "Q",
       mode: "text", options: [], allowOther: false });
     const first = await app.inject({ method: "POST", url: `/api/v1/questions/${question.id}/answer`, headers: { host: "127.0.0.1:3784" },

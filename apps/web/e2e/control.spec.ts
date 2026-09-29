@@ -152,6 +152,8 @@ test("resumes a stopped RPC session and exposes contextual launchers", async ({ 
     await expect(page.getByText("Narzędzia sesji")).toBeVisible();
     await expect(page.getByText("Automatyzacja", { exact: true })).toBeVisible();
     await expect(page.getByText("Bezpośredni bash", { exact: true })).toBeVisible();
+    await expect(page.getByText("Nieskonfigurowane", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Wyślij test na telefon" })).toBeDisabled();
   }
 });
 

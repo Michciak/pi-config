@@ -71,6 +71,16 @@ object Notifications {
             .build())
     }
 
+    fun test(context: Context, title: String, message: String) {
+        notify(context, "notification-test", NotificationCompat.Builder(context, ATTENTION_CHANNEL)
+            .setSmallIcon(R.drawable.ic_pi)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build())
+    }
+
     private fun notify(context: Context, id: String, notification: android.app.Notification) {
         runCatching { NotificationManagerCompat.from(context).notify(id.hashCode(), notification) }
     }

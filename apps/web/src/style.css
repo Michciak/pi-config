@@ -413,6 +413,18 @@ aside { overflow: auto; padding: 1rem; }
 .setting-list button em { color: #8f909f; font-size: .63rem; font-style: normal; }
 .setting-list button:hover:not(:disabled) { border-color: rgba(140,108,255,.24); background: var(--control-hover); transform: none; }
 .setting-list .danger-row i, .setting-list .danger-row em { color: #ff8199; }
+.notification-health { display: flex; align-items: center; gap: .58rem; min-height: 42px; padding: .5rem .62rem; border: 1px solid var(--line-subtle); border-radius: var(--radius-control); background: var(--control); }
+.notification-health > i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; color: #777887; background: currentColor; }
+.notification-health > span { display: grid; gap: .08rem; }
+.notification-health b { color: var(--muted-strong); font-size: .7rem; }
+.notification-health small { color: var(--muted); font-size: .62rem; }
+.notification-health.enabled > i { color: var(--green); box-shadow: 0 0 9px currentColor; }
+.notification-health.enabled b { color: #83e8c2; }
+.notification-health.error > i { color: var(--red); box-shadow: 0 0 9px currentColor; }
+.notification-health.error b { color: #ff9baf; }
+.notification-test { width: 100%; margin-top: .55rem; font-size: .68rem; }
+.notification-help, .delivery-result { display: block; margin: .45rem .12rem 0; color: var(--muted); font-size: .62rem; line-height: 1.45; }
+.delivery-result { color: var(--muted-strong); }
 .snippet-list { display: grid; gap: .38rem; max-height: 174px; overflow: auto; }
 .snippet-list label { display: flex; align-items: flex-start; gap: .52rem; padding: .56rem; border: 1px solid var(--line-subtle); border-radius: var(--radius-control); background: var(--control); cursor: pointer; }
 .snippet-list label:has(input:checked) { border-color: rgba(140,108,255,.28); background: rgba(140,108,255,.07); }
