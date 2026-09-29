@@ -662,3 +662,8 @@ aside { overflow: auto; padding: 1rem; }
 .agent-dot.waiting { background:#e6b86a; }
 .agent-dot.completed { background:#79bd9a; }
 .agent-dot.error { background:#e68792; }
+
+.composer-input { position:relative; }
+.composer-resizer { position:absolute; top:0; right:0; z-index:2; width:22px; height:22px; line-height:22px; font-size:13px; transform:rotate(-90deg); color:#737c90; border-radius:4px; }
+.composer-resizer:hover,.composer-resizer:focus-visible { color:#c5b9ff; background:#ffffff08; outline:1px solid #a695ff55; }
+.composer-input textarea { padding-right:26px; }

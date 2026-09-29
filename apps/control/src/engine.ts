@@ -287,6 +287,9 @@ export class EngineManager {
       summary.status = "error";
       summary.updatedAt = now();
       this.store.upsertSession(summary);
+      if (String(error).includes("Timeout waiting for response")) {
+        throw Object.assign(new Error("Pi nie odpowiedziało podczas uruchamiania sesji. Sprawdź rozszerzenia i dostępność providerów, a następnie ponów otwarcie sesji. Historia nie została usunięta."), {statusCode:503, code:"PI_SESSION_START_TIMEOUT"});
+      }
       throw error;
     }
   }

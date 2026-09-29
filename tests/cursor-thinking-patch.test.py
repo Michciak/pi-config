@@ -34,6 +34,18 @@ console.log('Grok reasoning_effort mapping OK');
 """
    (root/'test.mjs').write_text(test)
    subprocess.run(['node',str(root/'test.mjs')],check=True,cwd=root)
+ def test_catalog_timeout_uses_existing_fallback(self):
+  source = "async function discover() { try { const models = await Cursor.models.list({ apiKey }); return models; } catch { return ['cached']; } }"
+  updated = patch.patch_discovery_timeout(source)
+  self.assertEqual(patch.patch_discovery_timeout(updated), updated)
+  script = """
+import assert from 'node:assert/strict';
+const apiKey = 'test';
+const Cursor = {models:{list:()=>new Promise(()=>{})}};
+const setTimeout = (fn, ms) => { assert.equal(ms, 10000); queueMicrotask(fn); return {unref(){}}; };
+""" + updated + "\nassert.deepEqual(await discover(), ['cached']);"
+  subprocess.run(['node','--input-type=module','-e',script],check=True)
+
  def test_unknown_source_rejected(self):
   with self.assertRaises(RuntimeError):patch.patch_text('changed upstream')
 if __name__=='__main__':unittest.main()

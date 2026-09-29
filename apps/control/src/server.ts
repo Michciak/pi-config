@@ -44,7 +44,7 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   app.setErrorHandler((error: any, _request, reply) => {
     const status = Number(error?.statusCode) || 500;
     if (status >= 500) app.log.error(error);
-    reply.code(status).send({ error: status >= 500 ? "Internal server error" : error.message });
+    reply.code(status).send({ error: status >= 500 && error.code !== "PI_SESSION_START_TIMEOUT" ? "Internal server error" : error.message });
   });
 
   app.addHook("preHandler", async (request, reply) => {

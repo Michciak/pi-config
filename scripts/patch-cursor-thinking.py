@@ -20,6 +20,24 @@ def patch_text(text):
     text=text.replace('effort: boolean;', 'effort: boolean;\n        reasoningEffort: boolean;')
     return '// pi-remote: reasoning_effort compatibility\n'+text
 
+def patch_discovery_timeout(text):
+    marker = '// pi-remote: bounded catalog discovery'
+    if marker in text: return text
+    old = 'const models = await Cursor.models.list({ apiKey });'
+    if text.count(old) != 1:
+        raise RuntimeError('Unexpected Cursor catalog source; refusing to patch')
+    # Race only the catalog read; its existing catch uses cache/fallback models.
+    new = """const models = await Promise.race([
+            Cursor.models.list({ apiKey }),
+            new Promise<never>((_, reject) => {
+                const timer = setTimeout(() => reject(new Error("Cursor catalog discovery timed out")), 10000);
+                timer.unref?.();
+            }),
+        ]);"""
+    if 'interface ' not in text and 'import type ' not in text:
+        new = new.replace('new Promise<never>', 'new Promise')
+    return marker + '\n' + text.replace(old, new)
+
 def apply(agent_dir, backup_root):
     package=agent_dir/'npm/node_modules/pi-cursor-sdk'
     if not (package/'package.json').exists(): return
@@ -27,7 +45,7 @@ def apply(agent_dir, backup_root):
         print('Cursor thinking patch: skipped (version differs from 0.3.10)'); return
     changes=[]
     for name in ['src/model-discovery.ts','dist/model-discovery.js']:
-        path=package/name; original=path.read_text(); updated=patch_text(original)
+        path=package/name; original=path.read_text(); updated=patch_discovery_timeout(patch_text(original))
         if original != updated: changes.append((path,name,updated))
     for path,name,updated in changes:
         backup=backup_root/'cursor-sdk'/name; backup.parent.mkdir(parents=True,exist_ok=True)
