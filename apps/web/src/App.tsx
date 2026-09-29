@@ -22,6 +22,16 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string>();
   const [messages, setMessages] = useState<any[]>([]);
   const [sessionState, setSessionState] = useState<any>();
+  const [thinkingLevels, setThinkingLevels] = useState<string[]>([]);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [modelPicker, setModelPicker] = useState(false);
+  const [modelQuery, setModelQuery] = useState("");
+  const [modelProvider, setModelProvider] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [folders, setFolders] = useState<Awaited<ReturnType<typeof controlApi.directories>>>();
+  const folderRequest = useRef(0);
+  const [folderError, setFolderError] = useState("");
   const [models, setModels] = useState<Model[]>([]);
   const [commands, setCommands] = useState<SlashCommand[]>([]);
   const [subagents, setSubagents] = useState<SubagentProfile[]>([]);
@@ -90,14 +100,15 @@ export default function App() {
   }
 
   async function readSession(id: string) {
-    const [nextMessages, nextState, nextModels, nextCommands, nextSubagents] = await Promise.all([
+    const [nextMessages, nextState, nextModels, nextCommands, nextSubagents, nextThinkingLevels] = await Promise.all([
       controlApi.command<any[]>(id, "get_messages"),
       controlApi.command(id, "get_state"),
       controlApi.command<Model[]>(id, "get_available_models"),
       controlApi.command<SlashCommand[]>(id, "get_commands"),
       controlApi.subagents(id).catch(() => []),
+      controlApi.command<string[]>(id, "get_available_thinking_levels"),
     ]);
-    setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands); setSubagents(nextSubagents);
+    setThinkingLevels(nextThinkingLevels); setMessages(nextMessages); setSessionState(nextState); setModels(nextModels); setCommands(nextCommands); setSubagents(nextSubagents);
   }
 
   async function loadSession(id: string, resumeIfNeeded = true) {
@@ -209,10 +220,11 @@ export default function App() {
   }
 
   async function createSession() {
+    setCreating(true);
     try {
       const session = await controlApi.createSession(workspace, sessionName);
-      showSession(session); setSessionName(""); await loadSession(session.id);
-    } catch (cause) { setError(String(cause)); }
+      showSession(session); setSessionName(""); setNewSessionOpen(false); await loadSession(session.id);
+    } catch (cause) { setError(String(cause)); } finally { setCreating(false); }
   }
 
   async function importSession() {
@@ -288,14 +300,29 @@ export default function App() {
     catch (cause) { setError(String(cause)); await refresh(); }
   }
 
-  async function changeModel(value: string) {
-    if (!selectedId || !value) return;
-    const [provider, ...modelId] = value.split("/");
+  async function browseFolders(path: string) {
+    const request = ++folderRequest.current;
+    setFolderError("");
+    try { const result = await controlApi.directories(path); if (request === folderRequest.current) setFolders(result); }
+    catch { if (request === folderRequest.current) setFolderError("Nie można otworzyć folderu. Wybierz katalog wewnątrz dozwolonego workspace."); }
+  }
+
+  async function changeSetting(command: string, payload: Record<string, unknown>) {
+    if (!selectedId || settingsBusy) return;
+    const id = selectedId;
+    setSettingsBusy(true);
     try {
-      await controlApi.command(selectedId, "set_model", { provider, modelId: modelId.join("/") });
-      setSessionState(await controlApi.command(selectedId, "get_state"));
-      setError("");
+      await controlApi.command(id, command, payload);
+      const [state, levels] = await Promise.all([controlApi.command(id, "get_state"), controlApi.command<string[]>(id, "get_available_thinking_levels")]);
+      if (selectedRef.current === id) { setSessionState(state); setThinkingLevels(levels); }
+      setModelPicker(false); setError("");
     } catch (cause) { setError(String(cause)); }
+    finally { setSettingsBusy(false); }
+  }
+
+  async function changeModel(value: string) {
+    const [provider, ...modelId] = value.split("/");
+    await changeSetting("set_model", {provider, modelId: modelId.join("/")});
   }
 
   async function chooseImages(files: FileList | null) {
@@ -336,6 +363,22 @@ export default function App() {
         <a href={pairing.deepLink}>Otwórz w Pi Remote</a>
       </section>
     </div>}
+    {modelPicker && <div className="modal-backdrop" onClick={() => setModelPicker(false)}><section className="selection-modal" role="dialog" aria-modal="true" aria-label="Wybierz model" onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === "Escape") setModelPicker(false); }}>
+      <div className="selection-title"><h2>Wybierz model</h2><button className="ghost" onClick={() => setModelPicker(false)}>Zamknij</button></div>
+      <input autoFocus aria-label="Szukaj modelu" placeholder="Szukaj po nazwie lub dostawcy…" value={modelQuery} onChange={event => setModelQuery(event.target.value)} />
+      <select aria-label="Dostawca modeli" value={modelProvider} onChange={event => setModelProvider(event.target.value)}><option value="">Wszyscy dostawcy</option>{[...new Set(models.map(m => m.provider))].sort().map(provider => <option key={provider}>{provider}</option>)}</select>
+      <div className="selection-list">{models.filter(m => (!modelProvider || m.provider === modelProvider) && `${m.provider}/${m.id}`.toLowerCase().includes(modelQuery.toLowerCase())).map(m => <button className="ghost" disabled={settingsBusy} key={`${m.provider}/${m.id}`} onClick={() => void changeModel(`${m.provider}/${m.id}`)}><strong>{m.id}</strong><small>{m.provider}{sessionState?.model?.id === m.id && sessionState?.model?.provider === m.provider ? " · Wybrany" : ""}</small></button>)}</div>
+    </section></div>}
+    {newSessionOpen && <div className="modal-backdrop" onClick={() => !creating && setNewSessionOpen(false)}><section className="selection-modal" role="dialog" aria-modal="true" aria-label="Nowa sesja" onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === "Escape" && !creating) setNewSessionOpen(false); }}>
+      <div className="selection-title"><h2>Nowa sesja</h2><button className="ghost" disabled={creating} onClick={() => setNewSessionOpen(false)}>Anuluj</button></div>
+      <label>Nazwa sesji<input autoFocus value={sessionName} onChange={event => setSessionName(event.target.value)} placeholder="Nazwa sesji" /></label>
+      <label>Katalog sesji<input value={workspace} onChange={event => setWorkspace(event.target.value)} placeholder={workspaceRoot} /></label>
+      <button className="ghost" onClick={() => void browseFolders(workspace || workspaceRoot)}>Przeglądaj folder</button>
+      {folderError && <p role="alert">{folderError}</p>}
+      {folders && <><div className="folder-location">{folders.path}</div><div className="folder-actions"><button className="ghost" disabled={!folders.parent} onClick={() => void browseFolders(folders.parent!)}>↑ Poziom wyżej</button><button onClick={() => setWorkspace(folders.path)}>Wybierz ten folder</button></div>
+      <div className="selection-list folder-list">{folders.directories.map(folder => <button className="ghost" key={folder.name} onClick={() => void browseFolders(folder.path)}>▸ {folder.name}</button>)}{!folders.directories.length && <p>Brak podfolderów</p>}</div></>}
+      <button disabled={creating || !workspace.trim()} onClick={() => void createSession()}>{creating ? "Tworzenie…" : "Utwórz sesję"}</button>
+    </section></div>}
     {deleteTarget && <div className="modal-backdrop" onClick={() => setDeleteTarget(undefined)}>
       <section className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-session-title" onClick={(event) => event.stopPropagation()}>
         <div className="confirm-icon">×</div>
@@ -352,9 +395,7 @@ export default function App() {
       <aside className="sessions-panel">
         <div className="panel-heading"><div><span>WORKSPACE</span><h2>Sesje</h2></div><b>{status?.sessions.length ?? 0}</b></div>
         <div className="new-session">
-          <input value={workspace} onChange={(event) => setWorkspace(event.target.value)} placeholder={workspaceRoot} />
-          <input value={sessionName} onChange={(event) => setSessionName(event.target.value)} placeholder="Nazwa sesji" />
-          <button onClick={createSession} disabled={status?.engine !== "running"}>＋ Nowa sesja</button>
+          <button onClick={() => { setNewSessionOpen(true); setFolders(undefined); void browseFolders(workspace || workspaceRoot); }} disabled={status?.engine !== "running"}>＋ Nowa sesja</button>
           <details className="import-session"><summary>Import kopii sesji terminalowej</summary>
             <input value={importPath} onChange={(event) => setImportPath(event.target.value)} placeholder="~/.pi/agent/sessions/…jsonl" />
             <button className="ghost" onClick={importSession} disabled={status?.engine !== "running"}>Importuj kopię</button>
@@ -377,12 +418,9 @@ export default function App() {
               <p title={selected.workspace}><span>⌁</span>{selected.workspace}</p>
             </div>
             <div className="session-controls">
-              <label><span>Model</span><select aria-label="Model" value={sessionState?.model ? `${sessionState.model.provider}/${sessionState.model.id}` : ""}
-                onChange={(event) => void changeModel(event.target.value)}>
-                <option value="">Wybierz model</option>{models.map((model) => <option key={`${model.provider}/${model.id}`}>{model.provider}/{model.id}</option>)}
-              </select></label>
-              <label className="thinking-control"><span>Myślenie</span><select aria-label="Poziom myślenia" value={sessionState?.thinkingLevel ?? "medium"} onChange={(event) => void inspect("set_thinking_level", { level: event.target.value })}>
-                {['off','minimal','low','medium','high','xhigh','max'].map((level) => <option key={level}>{level}</option>)}
+              <label><span>Model</span><button className="model-picker-trigger ghost" disabled={settingsBusy} onClick={() => { setModelPicker(true); setModelQuery(""); setModelProvider(""); }}>{sessionState?.model ? `${sessionState.model.provider} / ${sessionState.model.id}` : "Wybierz model"} ▾</button></label>
+              <label className="thinking-control"><span>Myślenie</span><select aria-label="Poziom myślenia" disabled={settingsBusy || thinkingLevels.length < 2} value={sessionState?.thinkingLevel ?? "off"} onChange={event => void changeSetting("set_thinking_level", {level:event.target.value})}>
+                {thinkingLevels.length ? thinkingLevels.map(level => <option key={level}>{level}</option>) : <option value="off">Niedostępne</option>}
               </select></label>
               <button className={`tools-toggle ghost ${advanced ? "active" : ""}`} aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}><span>⌘</span>Narzędzia</button>
             </div>
@@ -399,7 +437,7 @@ export default function App() {
           </nav>}
 
           {(extensionUi.statuses.length > 0 || extensionUi.widgets.length > 0 || extensionUi.notices.length > 0) && <section className="extension-ui">
-            {extensionUi.statuses.map(([key, value]) => <div className="extension-status" key={key}><small>{key}</small><span>{value}</span></div>)}
+            {extensionUi.statuses.length > 0 && <details className="extension-diagnostics"><summary>Status rozszerzeń</summary>{extensionUi.statuses.map(([key,value]) => <div key={key}><strong>{key}</strong>: {value}</div>)}</details>}
             {extensionUi.widgets.map(([key, lines]) => <pre key={key}>{lines.join("\n")}</pre>)}
             {extensionUi.notices.map((notice) => <div className={`extension-notice ${notice.kind}`} key={notice.seq}>{notice.message}</div>)}
           </section>}

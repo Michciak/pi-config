@@ -1,4 +1,4 @@
-import { existsSync, realpathSync, statSync } from "node:fs";
+import { existsSync, realpathSync, statSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
@@ -36,4 +36,15 @@ export function resolveOutputUnderWorkspace(root: string, requested: string): st
   const rel = relative(canonicalRoot, parent);
   if (rel.startsWith("..") || rel.startsWith("/")) throw new Error(`Output is outside the allowed root: ${canonicalRoot}`);
   return join(parent, basename(raw));
+}
+
+export function listWorkspaceDirectories(root: string, requested = root) {
+  const path = resolveWorkspace(root, requested);
+  const canonicalRoot = realpathSync(root);
+  const directories = readdirSync(path, { withFileTypes: true }).filter(entry => !entry.name.startsWith(".")).flatMap(entry => {
+    if (!entry.isDirectory() && !entry.isSymbolicLink()) return [];
+    try { return [{ name: entry.name, path: resolveWorkspace(root, join(path, entry.name)) }]; }
+    catch { return []; }
+  }).sort((a, b) => a.name.localeCompare(b.name));
+  return { path, parent: path === canonicalRoot ? null : dirname(path), directories };
 }

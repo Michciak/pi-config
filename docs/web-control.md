@@ -172,3 +172,15 @@ updates are grouped by call ID and hidden once the durable result is available.
 Scrolling away from the bottom pauses output following. Recognized source-file
 links open Rider on the Mac running Control Service; the server still enforces
 the configured workspace boundary. Failed opens are shown beside the message.
+
+### Model settings and session folders
+
+The model picker supports a name/provider search and provider filtering. Thinking
+choices come from Pi RPC `get_available_thinking_levels` for the current model.
+Both model and thinking changes refresh authoritative state before updating the
+controls. Provider diagnostics are collapsed under Status rozszerzeń.
+
+Nowa sesja opens a dedicated form with a folder browser. The browser lists only
+directories under the configured workspace root, validates real paths and hides
+symlinks that escape that root. Select Wybierz ten folder to apply the current
+folder. Creating a session requires an explicit final click.

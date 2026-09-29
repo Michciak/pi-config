@@ -16,7 +16,7 @@ import { EventBus } from "./events.js";
 import { FirebaseNotifier } from "./firebase.js";
 import { InteractionBroker } from "./interactions.js";
 import { StateStore } from "./store.js";
-import { resolveFileUnderWorkspace } from "./workspace.js";
+import { resolveFileUnderWorkspace, listWorkspaceDirectories } from "./workspace.js";
 
 interface Dependencies {
   config: ControlConfig;
@@ -71,6 +71,10 @@ export async function buildServer(deps: Dependencies): Promise<FastifyInstance> 
   }));
   app.get("/api/v1/config", async () => ({ workspaceRoot: config.workspaceRoot, port: config.port }));
   app.get("/api/v1/openapi.json", async () => app.swagger());
+  app.get("/api/v1/directories", async (request: any, reply) => {
+    try { return listWorkspaceDirectories(config.workspaceRoot, String(request.query?.path ?? config.workspaceRoot)); }
+    catch { return reply.code(400).send({ error: "Folder is unavailable or outside the allowed workspace" }); }
+  });
   app.get("/api/v1/snippets", async () => loadSnippets(config.snippetsDir));
   app.post("/api/v1/notifications/test", async (_request, reply) => {
     const event = events.publish("notification.test", {

@@ -606,3 +606,17 @@ aside { overflow: auto; padding: 1rem; }
 .tool-output.failed { border-color: #f8717155; }
 .file-link { display: inline; padding: 0; border: 0; border-radius: 0; background: transparent; color: #b9a6ff; text-decoration: underline; text-underline-offset: 3px; font: inherit; overflow-wrap: anywhere; }
 .file-error { color: #fca5a5; font-size: 12px; }
+.conversation-head { flex-shrink: 0; }
+.session-controls { flex-shrink: 0; }
+.model-picker-trigger { max-width: 290px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.selection-modal { width: min(620px, calc(100vw - 32px)); max-height: 90dvh; overflow: auto; background: #11131e; border: 1px solid #ffffff20; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 24px 90px #0009; }
+.selection-title,.folder-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.selection-title h2 { margin: 0; }
+.selection-modal label { display: grid; gap: 8px; font-size: 12px; color: #aab4c6; }
+.selection-list { min-height: 80px; max-height: 45dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.selection-list button { flex-shrink: 0; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; overflow-wrap: anywhere; }
+.selection-list small { color: #939caf; }
+.folder-location { overflow-wrap: anywhere; font-size: 12px; color: #b9a6ff; }
+.extension-diagnostics { color: #8893a6; font-size: 11px; }
+.extension-diagnostics summary { cursor: pointer; }
+@media(max-width: 700px) { .model-picker-trigger { max-width: 220px; } .selection-modal { padding: 16px; } }

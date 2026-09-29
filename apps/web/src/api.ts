@@ -85,6 +85,7 @@ export const controlApi = {
   cancelQuestion: (id: string) => api<UserQuestion>(`/questions/${id}/cancel`, { method: "POST" }),
   approvals: () => api<Approval[]>("/approvals"),
   decideApproval: (id: string, approve: boolean) => api<Approval>(`/approvals/${id}/decision`, { method: "POST", body: JSON.stringify({ decision: approve ? "approve" : "reject" }) }),
+  directories: (path: string) => api<{ path: string; parent: string | null; directories: Array<{name: string; path: string}> }>(`/directories?path=${encodeURIComponent(path)}`),
   openRider: (path: string) => api("/files/open-rider", { method: "POST", body: JSON.stringify({ path }) }),
 };
 
