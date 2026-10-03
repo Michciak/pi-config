@@ -4,7 +4,12 @@ Zdefiniowane przez użytkownika: 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 14.
 
 > Status wykonania: routing core (#1–#5), provider getter (#6), provider catalog smoke (#14), telemetry foundation (#10), native Hyprland backend (#11) oraz hyperlinks (#12) zostały wdrożone częściowo/core. Pozostają walidacje live: pełny inference providerów, extension smoke, memory compaction i realny spawn Hyprland.
 >
-> Uzupełnienia 2026-10-03: (a) scope/capabilities ładują się leniwie — zmiany `enabledModels` stosują się automatycznie przy `pi /reload`; (b) licencja opencode-go uwzględniona w quota, runtime-state, capabilities, scope (3 modele) i provider-smoke; (c) autostart Qwen przez extension `local-llama` z kontrolą bezpieczeństwa (konflikt GLM, podłoga pamięci, start tylko `--user`, stop przy wyjściu Pi tylko gdy ten proces go uruchomił).
+> Uzupełnienia 2026-10-03: (a) scope/capabilities ładują się leniwie — zmiany `enabledModels` stosują się automatycznie przy `pi /reload`; (b) licencja opencode-go uwzględniona w quota, runtime-state, capabilities, scope (29 modeli) i provider-smoke; (c) autostart Qwen przez extension `local-llama` z kontrolą bezpieczeństwa (konflikt GLM, podłoga pamięci, start tylko `--user`, stop przy wyjściu Pi tylko gdy ten proces go uruchomił); (d) live quota: Codex `x-codex-*` headers, opencode zen `/v1/usage`, OpenRouter credits; Cursor manual-only; Copilot expired (401, auto-exclude z recovery); quota jako bramka filtrująca (bez bonusu scoringu).
+>
+> Stan po commicie `acd0e3c` (2026-10-03, tree clean):
+> - DONE: #1, #2, #3 (core), #4, #5, #6, #12 (config)
+> - PARTIAL: #10 (telemetry JSONL bez agregacji; sync-models.mjs czeka na kalibrację scoringu), #11 (backend gotowy, brak live spawn), #14 (catalog smoke 40/40, brak inference per provider)
+> - OPEN: #7 (memory compaction live), #9 (extension smoke live)
 
 ---
 
