@@ -41,8 +41,13 @@ function hasCommand(command: string): boolean {
  * True when running inside tmux with the tmux binary on PATH.
  * `TMUX` is set by tmux in every process it spawns (shell or pane).
  */
+// Native Hyprland backend: the terminal is spawned directly as a detached
+// Wayland client (verified 2026-10-03 on Hyprland 0.56.2). hyprctl dispatch
+// exec is NOT used: 0.56 wraps dispatch args in Lua and breaks on spaces.
+// The compositor tiles the new window automatically; tmux sessions inside
+// remain addressable via the tmux CLI for send/read/close.
 function isHyprlandAvailable(): boolean {
-  return Boolean(process.env.HYPRLAND_INSTANCE_SIGNATURE) && hasCommand("hyprctl") && hasCommand("tmux") && Boolean(findTerminal());
+  return Boolean(process.env.HYPRLAND_INSTANCE_SIGNATURE) && Boolean(process.env.WAYLAND_DISPLAY) && hasCommand("tmux") && Boolean(findTerminal());
 }
 
 function useHyprland(): boolean {
@@ -148,7 +153,15 @@ export function createSurfaceSplit(
     const session = `pi-subagent-${safeName}-${Date.now().toString(36)}`;
     const terminal = findTerminal();
     if (!terminal) throw new Error("No supported terminal found for Hyprland subagent window");
-    execFileSync("hyprctl", ["dispatch", "exec", `${terminal} -e tmux new-session -A -s ${shellEscape(session)}`], { encoding: "utf8" });
+    // NOTE: foot -e is ignored by foot (xterm compat); each terminal gets
+    // its own launch syntax. Session id is sanitized above: no quoting needed.
+    const tmuxArgs = ["tmux", "new-session", "-A", "-s", session];
+    const argv =
+      terminal === "alacritty" ? [terminal, "-e", ...tmuxArgs]
+      : terminal === "wezterm" ? [terminal, "start", "--", ...tmuxArgs]
+      : [terminal, ...tmuxArgs]; // foot, kitty: positional command
+    const child = execFile(argv[0], argv.slice(1), { detached: true, stdio: "ignore", env: process.env });
+    child.unref();
     return session;
   }
   void name;
