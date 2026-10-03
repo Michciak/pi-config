@@ -15,6 +15,8 @@
 
 import { spawn, execFileSync, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync, rmSync, appendFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface PollResult {
   reason: "done" | "sentinel" | "error";
@@ -72,11 +74,13 @@ function openMonitorWindow(name: string, sessionFile: string): number | undefine
   const terminal = findTerminal();
   if (!terminal) return undefined;
   const safeName = (name || "subagent").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 40);
-  const tailArgs = ["tail", "-F", sessionFile];
+  // Formatted live transcript (scripts/session-view.mjs) instead of raw JSONL.
+  const viewer = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "scripts", "session-view.mjs");
+  const viewArgs = ["node", viewer, sessionFile];
   const argv =
-    terminal === "alacritty" ? [terminal, "--title", safeName, "-e", ...tailArgs]
-    : terminal === "wezterm" ? [terminal, "start", "--", ...tailArgs]
-    : [terminal, "--title", safeName, ...tailArgs]; // foot, kitty
+    terminal === "alacritty" ? [terminal, "--title", safeName, "-e", ...viewArgs]
+    : terminal === "wezterm" ? [terminal, "start", "--", ...viewArgs]
+    : [terminal, "--title", safeName, ...viewArgs]; // foot, kitty
   try {
     const proc = spawn(argv[0], argv.slice(1), { detached: true, stdio: "ignore", env: process.env });
     proc.unref();
