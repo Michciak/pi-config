@@ -9,7 +9,9 @@ Zdefiniowane przez użytkownika: 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 14.
 > Stan po commicie `acd0e3c` (2026-10-03, tree clean):
 > - DONE: #1, #2, #3 (core), #4, #5, #6, #12 (config)
 > - PARTIAL: #10 (telemetry JSONL bez agregacji; sync-models.mjs skalibrowany i zapisany, router 10/10), #14 (catalog smoke 40/40, brak inference per provider — świadomie pominięte: koszt quota)
-> - OPEN: #7 (memory compaction live), #9 (extension smoke live)
+> - DONE: #9 (bash-guard popup x3, /snippets panel, /browser on→goto→eval→screenshot PNG→off; model ślepy na popupy, guard agresywny wobec read-only, nawigacja wymagała obejścia wersji Playwright)
+> - PARTIAL: #7 (komendy /om on/:compact/:status działają; pełna compaction z dużym ledgerem otwarta — forced odmawia przy małej sesji)
+> - OPEN (odłożone): #14 inference per provider (koszt quota)
 > - DONE: #11 (RPC headless backend, commit 3e8e2ba; tmux tylko legacy fallback)
 
 ---
