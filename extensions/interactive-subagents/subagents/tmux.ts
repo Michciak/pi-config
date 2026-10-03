@@ -1,13 +1,12 @@
 /**
- * tmux surface layer — the only terminal multiplexer this extension supports.
+ * Subagent surface layer.
  *
- * Everything the extension does to a tmux surface goes through the small API
- * in this file: create/split a pane, type a command into it, read its screen,
- * close it, and poll for exit. Keeping the tmux calls isolated here means
- * index.ts stays testable without a multiplexer running.
+ * Under Hyprland, each surface is a native terminal window containing a
+ * dedicated tmux session. Under other desktops, the legacy backend creates a
+ * tmux pane. Both backends expose the same send/read/close API to index.ts.
  *
- * Surfaces are identified by tmux pane ids (e.g. `%12`). New subagents split
- * the parent Pi pane when Pi is running inside tmux.
+ * Surface IDs are tmux pane ids for the legacy backend and tmux session names
+ * for native Hyprland windows.
  */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
@@ -42,22 +41,42 @@ function hasCommand(command: string): boolean {
  * True when running inside tmux with the tmux binary on PATH.
  * `TMUX` is set by tmux in every process it spawns (shell or pane).
  */
+function isHyprlandAvailable(): boolean {
+  return Boolean(process.env.HYPRLAND_INSTANCE_SIGNATURE) && hasCommand("hyprctl") && hasCommand("tmux") && Boolean(findTerminal());
+}
+
+function useHyprland(): boolean {
+  const requested = process.env.PI_SUBAGENT_SURFACE?.toLowerCase();
+  if (requested === "tmux") return false;
+  if (requested === "hyprland") return true;
+  return isHyprlandAvailable();
+}
+
+function findTerminal(): string | undefined {
+  const preferred = process.env.PI_TERMINAL?.trim();
+  if (preferred && hasCommand(preferred)) return preferred;
+  for (const candidate of ["kitty", "foot", "alacritty", "wezterm"]) {
+    if (hasCommand(candidate)) return candidate;
+  }
+  return undefined;
+}
+
 export function isTmuxAvailable(): boolean {
   return !!process.env.TMUX && hasCommand("tmux");
 }
 
 export function isMuxAvailable(): boolean {
-  return isTmuxAvailable();
+  return isHyprlandAvailable() || isTmuxAvailable();
 }
 
 export function muxSetupHint(): string {
-  return "Start pi inside tmux (`tmux new -A -s pi 'pi'`).";
+  return isHyprlandAvailable()
+    ? "Hyprland windows are enabled; set PI_SUBAGENT_SURFACE=tmux to force tmux panes."
+    : "Start pi inside tmux (`tmux new -A -s pi 'pi'`) or run under Hyprland with a supported terminal.";
 }
 
-function requireTmux(): void {
-  if (!isTmuxAvailable()) {
-    throw new Error(`tmux is required for subagents. ${muxSetupHint()}`);
-  }
+function requireSurface(): void {
+  if (!isMuxAvailable()) throw new Error(`No subagent surface backend available. ${muxSetupHint()}`);
 }
 
 // ── Shell helpers ──
@@ -124,8 +143,16 @@ export function createSurfaceSplit(
   direction: "left" | "right" | "up" | "down",
   fromSurface?: string,
 ): string {
+  if (useHyprland()) {
+    const safeName = (name || "subagent").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 40);
+    const session = `pi-subagent-${safeName}-${Date.now().toString(36)}`;
+    const terminal = findTerminal();
+    if (!terminal) throw new Error("No supported terminal found for Hyprland subagent window");
+    execFileSync("hyprctl", ["dispatch", "exec", `${terminal} -e tmux new-session -A -s ${shellEscape(session)}`], { encoding: "utf8" });
+    return session;
+  }
   void name;
-  requireTmux();
+  requireSurface();
 
   const args = ["split-window", "-d"];
   if (direction === "left" || direction === "right") {
@@ -156,7 +183,7 @@ export function createSurfaceSplit(
  * then submitted with Enter.
  */
 export function sendCommand(surface: string, command: string): void {
-  requireTmux();
+  requireSurface();
   execFileSync("tmux", ["send-keys", "-t", surface, "-l", command], { encoding: "utf8" });
   execFileSync("tmux", ["send-keys", "-t", surface, "Enter"], { encoding: "utf8" });
 }
@@ -203,7 +230,7 @@ export function sendLongCommand(
  * Read the screen contents of a pane (sync).
  */
 export function readScreen(surface: string, lines = 50): string {
-  requireTmux();
+  requireSurface();
   return execFileSync(
     "tmux",
     ["capture-pane", "-p", "-t", surface, "-S", `-${Math.max(1, lines)}`],
@@ -217,7 +244,7 @@ export function readScreen(surface: string, lines = 50): string {
  * Read the screen contents of a pane (async).
  */
 export async function readScreenAsync(surface: string, lines = 50): Promise<string> {
-  requireTmux();
+  requireSurface();
   const { stdout } = await execFileAsync(
     "tmux",
     ["capture-pane", "-p", "-t", surface, "-S", `-${Math.max(1, lines)}`],
@@ -230,7 +257,11 @@ export async function readScreenAsync(surface: string, lines = 50): Promise<stri
  * Close a pane.
  */
 export function closeSurface(surface: string): void {
-  requireTmux();
+  requireSurface();
+  if (useHyprland()) {
+    execFileSync("tmux", ["kill-session", "-t", surface], { encoding: "utf8" });
+    return;
+  }
   execFileSync("tmux", ["kill-pane", "-t", surface], { encoding: "utf8" });
   rebalanceSurfaces();
 }

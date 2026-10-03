@@ -82,6 +82,31 @@ Baseline audit complete; staged implementation is in progress.
 - RPC smoke test accepted `/om on`, `/om:status`, and `/om off`; no `.memory/` was created in the no-session smoke run. Full compaction validation still needs a real test session.
 - Interactive subagents, observational memory, user services, extra providers, MCP, and production router adapters remain intentionally gated; their upstream versions and credentials need separate review rather than being silently enabled.
 
+## Latest execution — prioritized remaining tasks
+
+Implemented the first routing/availability pass from `REMAINING_TASKS.md`:
+
+- `scripts/route-model.mjs` now runs `collectRuntimeState()` before routing and records non-secret decisions in `~/.local/state/pi-config/router-decisions.jsonl`.
+- `scripts/runtime-state.mjs` now reports local health, OpenRouter catalog health, GitHub auth health, provider auth state, and explicit unknown health for Codex/Cursor where no stable generic endpoint exists.
+- `scripts/quota-check.mjs` now returns normalized quota records for OpenRouter, GitHub Copilot, OpenAI Codex, Cursor, and local hardware. Unknown quota is never treated as zero.
+- `settings/model-capabilities.json` now contains all currently enabled provider/model IDs.
+- Router filtering now inherits provider runtime state, rejects missing auth, rejects known exhausted quota, and preserves unknown quota as unknown.
+- Added router integration tests for provider-state inheritance, auth filtering, and exhausted-vs-unknown quota (10/10 PASS).
+- Added `scripts/provider-smoke.mjs`; all 11 enabled model IDs are present in `pi --list-models`.
+- Interactive subagents prefer native Hyprland terminal windows when available; `PI_SUBAGENT_SURFACE=tmux` forces the legacy pane backend.
+- `terminal.hyperlinks=true` was enabled in `~/.pi/agent/settings.json` after creating a backup.
+
+Current live result: Qwen is healthy; GLM is stopped; OpenRouter credits are known to be zero; GitHub Copilot auth health returned 401; Codex and Cursor are configured but health/quota remain explicitly unknown. Therefore remote models are now visible to routing, but they are not falsely presented as fully verified.
+
+## Latest execution — scope auto-reload, opencode-go, Qwen autostart
+
+- Router loads `enabledModels` and `model-capabilities.json` lazily on every call (`scripts/router.mjs`, `extensions/routing/policy.ts`); scope changes apply automatically on `pi /reload` with no process restart.
+- opencode-go license is now covered end-to-end: normalized quota record, provider runtime state (auth-only, explicitly unknown health/quota), 3 curated models in scope and capabilities (`glm-5.3-flash`, `kimi-k3`, `deepseek-v4-flash`), provider smoke passes 14/14.
+- All 29 Pi-catalogued opencode-go models added to `enabledModels` and `model-capabilities.json` (vision/context from `pi --list-models`, lower priorities so curated defaults keep precedence); provider smoke 40/40.
+- New `extensions/local-llama` extension: `session_start` ensures Qwen (skips when already healthy; refuses when GLM active or free memory below 16 GiB floor; starts only via `systemctl --user`), `session_shutdown` stops it only if this Pi process started it and no other `pi` process is running. Commands `/qwen-ensure`, `/qwen-stop`, `/qwen-status`; `PI_QWEN_AUTOSTOP=0` keeps the server running after exit, `PI_QWEN_MIN_AVAILABLE_GIB` tunes the safety floor.
+- Router tests 10/10 PASS; provider smoke 40/40 FOUND; TS extensions pass esbuild transform check.
+- Live quota per provider: Codex headers (`x-codex-primary-used-percent`, plan plus), opencode zen `/v1/usage` (rolling/weekly/monthly), OpenRouter credits; Cursor manual-only; Copilot expired (401, auto-excluded with recovery on renewal). Quota is a filter gate; removed unit-mixing scoring bonus.
+
 ## Next action
 
-Validate imported extensions interactively, and start the GLM fallback only when needed. User-service templates are available but intentionally not enabled or started.
+Complete interactive extension/provider smoke tests, observational-memory compaction validation, and a live Hyprland subagent spawn. Keep GLM disabled while Qwen is loaded because of the documented VRAM/OOM constraint.

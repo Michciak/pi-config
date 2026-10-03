@@ -14,7 +14,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { selectAgentModel, type AgentTaskClass } from "../../routing/policy.ts";
+import { selectAgentModelLive, type AgentTaskClass } from "../../routing/policy.ts";
 import {
   isMuxAvailable,
   muxSetupHint,
@@ -1187,9 +1187,10 @@ async function launchSubagent(
   const agentDefs = params.agent ? loadAgentDefaults(params.agent) : null;
   // Model selection is centralized in the orchestrator. Agent frontmatter is
   // descriptive only; it cannot silently select a remote provider.
-  const effectiveModel = selectAgentModel({
+  const effectiveModel = await selectAgentModelLive({
     requested: params.model,
     taskClass: params.taskClass as AgentTaskClass | undefined,
+    role: params.agent === "worker" ? "coding" : "general",
   });
   const effectiveTools = agentDefs?.tools;
   const effectiveSkills = agentDefs?.skills;

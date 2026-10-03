@@ -28,25 +28,30 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 | 5 skills | **PARTIAL** | Skills są obecne; `analyze-sessions` cost report i `pdf-reader` na `/usr/share/doc/speexdsp/manual.pdf` działają. `yt-dlp` 2026.08.19 jest teraz w izolowanym venv; pełny transcript test na poprawnym URL pozostaje do wykonania. |
 | 6 namespace compatibility | **PARTIAL** | Pi package smoke test działa; nie wykonano osobnego smoke testu każdego extension. |
 | 7 failure/recovery | **PARTIAL** | Fixture kończy się 3/3 PASS bez zmian testów; pełny model-driven workflow nie został jednoznacznie ukończony. |
-| 8 llama services | **PARTIAL** | Qwen działa manualnie. GLM załadował się na 8080, ale przy równoległym Qwen kernel OOM killer zatrzymał usługę; jednostki mają teraz wzajemny `Conflicts=` i pozostają disabled. |
+| 8 llama services | **PARTIAL/IMPROVED** | Nowe extension `local-llama` zapewnia autostart Qwen przy `session_start` (z kontrolą bezpieczeństwa: blokada gdy GLM aktywny, podłoga wolnej pamięci 16 GiB, start tylko przez `systemctl --user`) i zatrzymuje usługę przy `session_shutdown` tylko gdy ten proces Pi ją uruchomił (zabezpieczenie przed wieloma sesjami Pi). Komendy `/qwen-ensure`, `/qwen-stop`, `/qwen-status`. Jednostki nadal disabled z wzajemnym `Conflicts=`; GLM nie był testowany równolegle z uwagi na OOM. |
 | 9 interactive subagents | **PARTIAL/DONE CORE** | Pinned package, tmux, scoped agent models i live scout spawn/result działają. Nie testowano nested spawn ani wszystkich allowlistów. |
 | 10 observational memory | **PARTIAL/DONE CORE** | Package pinned i OFF domyślnie. Realny test utworzył `INDEX.md`, `JOURNEY.md`, topic file oraz run artifacts; wznowienie tej samej sesji `/om:status` działało. Pełna compaction pozostaje osobnym testem. |
 | 11 providers | **DONE** | Obecny zestaw (local-glm, local-qwen36, openrouter/auto, github-copilot, openai-codex, cursor) uznany za wystarczający. Nie planuje się dalszych providerów. |
 | 12 MCP | **DONE MINIMAL** | Dodano stdio MCP server i Pi bridge; `config_status` oraz `provider_quota_status` zostały odkryte i wywołane z Pi. |
 | 13 capability registry | **DONE STATIC** | `settings/model-capabilities.json` istnieje i jest używany przez router. |
-| 14 quota/cost adapters | **PARTIAL** | Dodano adapter OpenRouter credits oraz status OpenAI Codex OAuth (`quotaKnown=false` bez publicznego endpointu); cost telemetry pozostaje niepełne. | | — **NOWY PUNKT** | Dodać `left information getter` dla każdego aktywnego providera (cursor, github-copilot, openai-codex, openrouter). Local pozostaje `hardware-bound`. Plan: rozszerzyć `scripts/quota-check.mjs`. |
-| 15 model router | **PARTIAL** | Filtering/scoring, manual override, fallback limit i OpenRouter simple-task rule są przetestowane; brak pełnej integracji ze wszystkimi provider adapters. |
+| 14 quota/cost adapters | **DONE CORE** | `quota-check.mjs` ma live quota dla 3 providerów: OpenRouter (`/api/v1/credits`, remaining 0), OpenAI Codex (`x-codex-primary-used-percent` z nagłówków, plan plus, 0% zużycia), opencode-go (`GET /zen/go/v1/usage`, rolling 0% / weekly 2% / monthly 1%). Cursor: brak publicznego endpointu (tylko weryfikacja ręczna). Copilot: licencja wygasła (GitHub 401, `authValid=false`, modele wykluczane z routingu z auto-recovery po odnowieniu). Quota działa jako bramka (filtr), nie bonus scoringu — koszt preferencji w priority z `sync-models.mjs`. |
+| 15 model router | **PARTIAL/IMPROVED** | Router ma live pipeline `collectRuntimeState() → route()`, dziedziczenie stanu providera dla modeli, auth/health/quota filtering oraz wpisy capabilities dla całego obecnego scope (14 modeli, w tym 3 opencode-go). Scope i capabilities są ładowane leniwie przy każdym wywołaniu (`router.mjs`, `routing/policy.ts`), więc `pi /reload` i edycja `enabledModels` stosują się automatycznie. Remote inference dla Codex/Cursor/opencode-go pozostaje `healthy: unknown` (brak stabilnego endpointu), więc system nie udaje pełnej weryfikacji. |
 | 16 production structure | **PARTIAL** | Główna struktura istnieje; część upstream nadal jest lokalnym importem bez pełnego refactoru/normalizacji. |
-| 17 health check | **PARTIAL** | Basic/deep health działają; nie sprawdzają jeszcze wszystkich wymaganych extension/subagent/memory states. |
+| 17 health check | **PARTIAL/IMPROVED** | Local `/v1/models` i OpenRouter catalog są sprawdzane live; GitHub Copilot sprawdza token przez GitHub API. Codex/Cursor mają tylko auth/configuration check, ponieważ nie ma stabilnego generic health endpointu. Extension/subagent/memory state pozostają do pełnego smoke testu. |
 | 18 GLM-5.3 | **NOT DONE** | Model zachowany, ale nie wykonano nowego compatibility testu. |
 
 ## Nowe punkty planu
 
 | # | Temat | Opis |
 |---|---|---|
-| — **NOWY** | Quota left information getter | Dodać `left information getter` dla każdego aktywnego providera (cursor, github-copilot, openai-codex, openrouter). Local pozostaje `hardware-bound`. Plan: rozszerzyć `scripts/quota-check.mjs`. |
-| — **NOWY** | Hyperland window opener | Przerobić wszystkie extension i konfigurację, żeby zamiast z tmux-pane korzystała z otwierania nowego okna w natywnym Hyperland. Obecnie `createSurface()` używa `tmux split-window`. Należy zastąpić `hyprctl dispatch` lub odpowiednim API Hyprland. Hyprland 0.56.2 jest dostępny, `hyprctl` działa, środowisko Wayland. |
-| — **NOWY** | Naprawić hiperlinki w Pi | Hiperlinki OSC 8 nie działają w obecnej konfiguracji. Pi obsługuje `terminal.hyperlinks: boolean | "auto"` z domyślną wartością `"auto"`. Należy sprawdzić detekcję, czy nie jest zablokowana przez multiplexer/proxy terminala, i wymusić `terminal.hyperlinks: true` w `~/.pi/agent/settings.json` jeśli automatyczny wykrywanie nie działa. |
+| — **W TRAKCIE** | Quota left information getter | Dodano normalized getter dla wszystkich aktywnych providerów. OpenRouter zwraca realne credits; GitHub Copilot, OpenAI Codex i Cursor jawnie zwracają `quotaKnown=false`, bo nie mają stabilnego publicznego endpointu. Local pozostaje `hardware-bound`. |
+| — **W TRAKCIE** | Hyperland window opener | Backend subagentów preferuje natywne okno Hyprland, uruchamiając osobną sesję tmux wewnątrz terminala (`hyprctl dispatch exec`); `PI_SUBAGENT_SURFACE=tmux` zachowuje fallback. Pełny live spawn w Hyprland pozostaje do walidacji. |
+| — **DONE CONFIG** | Naprawić hiperlinki w Pi | Wymuszono `terminal.hyperlinks: true` w `~/.pi/agent/settings.json`; backup settings utworzono przed zmianą. Interaktywny test OSC 8 pozostaje do wykonania. |
+| — **DONE CORE** | Naprawić model selection — quota | `quota-check.mjs` normalizuje OpenRouter, GitHub Copilot, OpenAI Codex, Cursor i local. Router odrzuca znane zero i nie traktuje nieznanego quota jako zero. Providerzy bez stabilnego publicznego quota endpointu pozostają jawnie `quotaKnown=false`. |
+| — **DONE CORE** | Naprawić model selection — widoczność providerów | `model-capabilities.json` zawiera wszystkie 40 enabled modeli: Qwen, GLM, OpenRouter, 3 GitHub Copilot, 3 Codex, 2 Cursor i wszystkie 29 katalogowanych modeli opencode-go (priorytety niższe niż kuratorowane defaulty, więc Qwen pozostaje orchestratorem). Usunięto nieistniejące/stare Cursor IDs ze scope po weryfikacji przez `pi --list-models`. |
+| — **PARTIAL/DONE CORE** | Naprawić model selection — health check remote | `runtime-state.mjs` sprawdza local endpoints, OpenRouter catalog i GitHub auth API. Codex/Cursor mają jawny `healthy: undefined` po auth-only check, bo brak stabilnego generic health endpointu. Router odrzuca `healthy:false`, ale nie blokuje providerów z uczciwie nieznanym health. |
+| — **DONE CORE** | Naprawić model selection — integracja runtime | `scripts/route-model.mjs` realizuje `collectRuntimeState() → route(task, runtime)` i zapisuje niejawne telemetry. Extension `/route-model` oraz delegowanie subagentów korzystają z live policy; `PI_SUBAGENT_SURFACE` pozostaje niezależnym wyborem UI. |
+| — **DONE CORE** | Naprawić model selection — testy | `router.test.mjs` ma 10/10 PASS, w tym provider-state inheritance, auth filtering, known exhausted quota vs unknown quota. `scripts/provider-smoke.mjs` potwierdza 11/11 enabled modeli w `pi --list-models`. Pełny inference smoke per provider nadal wymaga osobnego testu z realnym requestem. |
 
 ## Nowe wdrożenia po audycie
 
@@ -58,6 +63,8 @@ Audyt: 2026-09-25. Stan repozytorium: `master`, clean.
 ## Wniosek
 
 Plan **nie jest w całości zrealizowany**. Fundament lokalny, scope, Qwen,
-subagenci, podstawowy router i diagnostyka działają. Do pełnej realizacji
-pozostają: quota left getter (nowy), Hyperland window opener (nowy), hiperlinki Pi (nowy), pełne testy memory i
-skills, GLM fallback, cost telemetry oraz GLM-5.3 compatibility test.
+subagenci, podstawowy router i diagnostyka działają. Core model selection,
+provider visibility, live runtime pipeline i routing tests są wykonane.
+Pozostają: pełne quota/inference adapters dla providerów bez publicznych endpointów,
+pełne cost telemetry, live smoke test Hyprland, interaktywne testy extension,
+pełna compaction memory, GLM fallback oraz GLM-5.3 compatibility test.

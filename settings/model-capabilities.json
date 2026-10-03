@@ -1,20 +1,670 @@
 {
   "local-qwen36/unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_M": {
-    "enabled": true, "verified": true, "local": true,
-    "roles": ["orchestrator", "coding", "general"], "reasoning": true,
-    "toolCalling": true, "vision": false, "contextWindow": 262144,
-    "latencyClass": "fast-local", "costClass": "local", "priority": 100
+    "enabled": true,
+    "verified": true,
+    "local": true,
+    "roles": [
+      "orchestrator",
+      "coding",
+      "general",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 262144,
+    "latencyClass": "fast-local",
+    "costClass": "local",
+    "priority": 70
   },
   "local-glm/ggml-org/GLM-4.7-Flash-GGUF:Q4_K": {
-    "enabled": true, "verified": true, "local": true,
-    "roles": ["fallback", "general"], "reasoning": true,
-    "toolCalling": true, "vision": false, "contextWindow": 202752,
-    "latencyClass": "fast-local", "costClass": "local", "priority": 60
+    "enabled": true,
+    "verified": true,
+    "local": true,
+    "roles": [
+      "fallback",
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 202752,
+    "latencyClass": "fast-local",
+    "costClass": "local",
+    "priority": 60
   },
   "openrouter/auto": {
-    "enabled": true, "verified": true, "local": false,
-    "roles": ["general", "fallback"], "reasoning": true,
-    "toolCalling": true, "vision": true, "contextWindow": 1000000,
-    "latencyClass": "variable", "costClass": "provider-selected", "priority": 40
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "fallback",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "variable",
+    "costClass": "provider-selected",
+    "priority": 40
+  },
+  "github-copilot/claude-haiku-4.5": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 200000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 35
+  },
+  "github-copilot/kimi-k3": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 262144,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 34
+  },
+  "github-copilot/gpt-5-mini": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 200000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 33
+  },
+  "openai-codex/gpt-5.6-luna": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "orchestrator",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 200000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 32
+  },
+  "openai-codex/gpt-5.5": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "coding",
+      "general"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 200000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 31
+  },
+  "openai-codex/gpt-6-astra": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "orchestrator",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 400000,
+    "latencyClass": "slow-remote",
+    "costClass": "subscription",
+    "priority": 30
+  },
+  "cursor/auto": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 200000,
+    "latencyClass": "variable",
+    "costClass": "provider-selected",
+    "priority": 28
+  },
+  "cursor/kimi-k3": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 262144,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 25
+  },
+  "opencode-go/glm-5.3-flash": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "fallback",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/kimi-k3": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/deepseek-v4-flash": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 1000000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/deepseek-v4-flash-vision-exp": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/deepseek-v4-pro": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/deepseek-v4.1-flash": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/glm-5.2": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/glm-5.3": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/gpt-5.6-luna": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1100000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/gpt-6-luna": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1100000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/grok-4.6": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 500000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/grok-4.7": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 500000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/hy3": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 256000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/hy4-preview": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/kimi-k2.7-code": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 262100,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/longcat-2.0": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/longcat-2.5-preview-free": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/mimo-v2.5": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/mimo-v2.5-pro": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/mimo-v2.6-flash": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/mimo-v2.6-pro": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/minimax-m2.7": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": false,
+    "contextWindow": 204800,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/minimax-m3": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/muse-spark-1.2-contributor": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/muse-spark-1.3-contributor": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/qwen3.7-plus": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/qwen3.8-flash": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/qwen3.8-max": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "reasoning"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "medium-remote",
+    "costClass": "subscription",
+    "priority": 75
+  },
+  "opencode-go/space-bunny-free": {
+    "enabled": true,
+    "verified": true,
+    "local": false,
+    "roles": [
+      "general",
+      "coding",
+      "fallback"
+    ],
+    "reasoning": true,
+    "toolCalling": true,
+    "vision": true,
+    "contextWindow": 1000000,
+    "latencyClass": "fast-remote",
+    "costClass": "subscription",
+    "priority": 75
   }
 }

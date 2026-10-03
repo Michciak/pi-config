@@ -1,28 +1,38 @@
 #!/usr/bin/env node
-import fs from "node:fs";
-import process from "node:process";
+import fs from "node:fs/promises";
+import { dirname } from "node:path";
+import { route } from "./router.mjs";
+import { collectRuntimeState } from "./runtime-state.mjs";
 
-const root = new URL("../", import.meta.url);
-const capabilities = JSON.parse(fs.readFileSync(new URL("settings/model-capabilities.json", root)));
-const settingsPath = `${process.env.HOME}/.pi/agent/settings.json`;
-const settings = JSON.parse(fs.readFileSync(settingsPath));
-const scope = new Set(settings.enabledModels ?? []);
+const telemetryPath = `${process.env.HOME}/.local/state/pi-config/router-decisions.jsonl`;
 
-export function select(task = {}) {
-  const candidates = Object.entries(capabilities)
-    .filter(([id, meta]) => scope.has(id) && meta.enabled && meta.verified)
-    .filter(([, meta]) => !task.localOnly || meta.local)
-    .filter(([, meta]) => !task.role || meta.roles.includes(task.role))
-    .filter(([, meta]) => !task.vision || meta.vision)
-    .filter(([, meta]) => !task.reasoning || meta.reasoning)
-    .filter(([, meta]) => !task.context || meta.contextWindow >= task.context)
-    .sort((a, b) => (b[1].priority ?? 0) - (a[1].priority ?? 0));
-  return candidates[0]?.[0] ?? null;
+export async function routeLive(task = {}, options = {}) {
+  const runtime = options.runtime ?? await collectRuntimeState();
+  const result = route(task, runtime);
+  return { ...result, runtime, selectedMeta: { runtime: runtime[result.selected] ?? runtime[result.selected.split("/", 1)[0]] ?? {} } };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const task = process.argv[2] ? JSON.parse(process.argv[2]) : {};
-  const result = select(task);
-  if (!result) process.exitCode = 1;
-  console.log(result ?? "NO_SCOPED_MODEL");
+async function recordDecision(task, result) {
+  await fs.mkdir(dirname(telemetryPath), { recursive: true });
+  const event = {
+    timestamp: new Date().toISOString(), task: { ...task, override: task.override ? "present" : undefined },
+    selected: result.selected, attempts: result.attempts, reason: result.reason,
+    runtime: Object.fromEntries(Object.entries(result.runtime).map(([id, state]) => [id, {
+      healthy: state.healthy, authConfigured: state.authConfigured,
+      quotaKnown: state.quotaKnown, quotaRemaining: state.quotaRemaining,
+    }])),
+  };
+  await fs.appendFile(telemetryPath, JSON.stringify(event) + "\n");
+}
+
+if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+  const input = process.argv[2] ? JSON.parse(process.argv[2]) : {};
+  try {
+    const result = await routeLive(input.task ?? input);
+    await recordDecision(input.task ?? input, result);
+    console.log(JSON.stringify({ selected: result.selected, attempts: result.attempts, reason: result.reason, runtime: result.runtime }, null, 2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }
