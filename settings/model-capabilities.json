@@ -47,10 +47,12 @@
     "reasoning": true,
     "toolCalling": true,
     "vision": true,
-    "contextWindow": 1000000,
+    "contextWindow": 2000000,
     "latencyClass": "variable",
-    "costClass": "provider-selected",
-    "priority": 40
+    "costClass": "cheap",
+    "priority": 79,
+    "avgCostPerM": 0,
+    "benchScore": 0
   },
   "github-copilot/claude-haiku-4.5": {
     "enabled": true,
@@ -65,8 +67,10 @@
     "vision": true,
     "contextWindow": 200000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 35
+    "costClass": "standard",
+    "priority": 78,
+    "avgCostPerM": 2,
+    "benchScore": 0
   },
   "github-copilot/kimi-k3": {
     "enabled": true,
@@ -78,11 +82,13 @@
     ],
     "reasoning": true,
     "toolCalling": true,
-    "vision": false,
-    "contextWindow": 262144,
+    "vision": true,
+    "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 34
+    "costClass": "standard",
+    "priority": 91,
+    "avgCostPerM": 6,
+    "benchScore": 71.9
   },
   "github-copilot/gpt-5-mini": {
     "enabled": true,
@@ -95,10 +101,12 @@
     "reasoning": true,
     "toolCalling": true,
     "vision": true,
-    "contextWindow": 200000,
+    "contextWindow": 264000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 33
+    "costClass": "mid",
+    "priority": 87,
+    "avgCostPerM": 0.6875,
+    "benchScore": 37.5
   },
   "openai-codex/gpt-5.6-luna": {
     "enabled": true,
@@ -112,10 +120,12 @@
     "reasoning": true,
     "toolCalling": true,
     "vision": true,
-    "contextWindow": 200000,
+    "contextWindow": 272000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 32
+    "costClass": "mid",
+    "priority": 94,
+    "avgCostPerM": 0.45,
+    "benchScore": 70.1
   },
   "openai-codex/gpt-5.5": {
     "enabled": true,
@@ -128,10 +138,12 @@
     "reasoning": true,
     "toolCalling": true,
     "vision": true,
-    "contextWindow": 200000,
+    "contextWindow": 272000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 31
+    "costClass": "premium",
+    "priority": 89,
+    "avgCostPerM": 11.25,
+    "benchScore": 72.6
   },
   "openai-codex/gpt-6-astra": {
     "enabled": true,
@@ -145,10 +157,12 @@
     "reasoning": true,
     "toolCalling": true,
     "vision": true,
-    "contextWindow": 400000,
+    "contextWindow": 272000,
     "latencyClass": "slow-remote",
-    "costClass": "subscription",
-    "priority": 30
+    "costClass": "premium",
+    "priority": 88,
+    "avgCostPerM": 20,
+    "benchScore": 87.6
   },
   "cursor/auto": {
     "enabled": true,
@@ -164,8 +178,10 @@
     "vision": true,
     "contextWindow": 200000,
     "latencyClass": "variable",
-    "costClass": "provider-selected",
-    "priority": 28
+    "costClass": "subscription",
+    "priority": 75,
+    "avgCostPerM": null,
+    "benchScore": 0
   },
   "cursor/kimi-k3": {
     "enabled": true,
@@ -177,11 +193,13 @@
     ],
     "reasoning": true,
     "toolCalling": true,
-    "vision": false,
-    "contextWindow": 262144,
+    "vision": true,
+    "contextWindow": 200000,
     "latencyClass": "medium-remote",
     "costClass": "subscription",
-    "priority": 25
+    "priority": 90,
+    "avgCostPerM": null,
+    "benchScore": 71.9
   },
   "opencode-go/glm-5.3-flash": {
     "enabled": true,
@@ -197,8 +215,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 91,
+    "avgCostPerM": 0.2375,
+    "benchScore": 58.8
   },
   "opencode-go/kimi-k3": {
     "enabled": true,
@@ -213,8 +233,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 91,
+    "avgCostPerM": 6,
+    "benchScore": 71.9
   },
   "opencode-go/deepseek-v4-flash": {
     "enabled": true,
@@ -230,8 +252,10 @@
     "vision": false,
     "contextWindow": 1000000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 79,
+    "avgCostPerM": 0.26249999999999996,
+    "benchScore": 0
   },
   "opencode-go/deepseek-v4-flash-vision-exp": {
     "enabled": true,
@@ -247,8 +271,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 79,
+    "avgCostPerM": 0.26249999999999996,
+    "benchScore": 0
   },
   "opencode-go/deepseek-v4-pro": {
     "enabled": true,
@@ -264,8 +290,10 @@
     "vision": false,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 91,
+    "avgCostPerM": 0.99,
+    "benchScore": 61.2
   },
   "opencode-go/deepseek-v4.1-flash": {
     "enabled": true,
@@ -281,8 +309,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 93,
+    "avgCostPerM": 0.26249999999999996,
+    "benchScore": 66.6
   },
   "opencode-go/glm-5.2": {
     "enabled": true,
@@ -297,8 +327,10 @@
     "vision": false,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 90,
+    "avgCostPerM": 2.15,
+    "benchScore": 57.7
   },
   "opencode-go/glm-5.3": {
     "enabled": true,
@@ -313,8 +345,10 @@
     "vision": false,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 90,
+    "avgCostPerM": 2.15,
+    "benchScore": 58.8
   },
   "opencode-go/gpt-5.6-luna": {
     "enabled": true,
@@ -329,8 +363,10 @@
     "vision": true,
     "contextWindow": 1100000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 94,
+    "avgCostPerM": 0.45,
+    "benchScore": 70.1
   },
   "opencode-go/gpt-6-luna": {
     "enabled": true,
@@ -345,8 +381,10 @@
     "vision": true,
     "contextWindow": 1100000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 92,
+    "avgCostPerM": 0.2,
+    "benchScore": 61.8
   },
   "opencode-go/grok-4.6": {
     "enabled": true,
@@ -362,8 +400,10 @@
     "vision": true,
     "contextWindow": 500000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 91,
+    "avgCostPerM": 3,
+    "benchScore": 63.7
   },
   "opencode-go/grok-4.7": {
     "enabled": true,
@@ -379,8 +419,10 @@
     "vision": true,
     "contextWindow": 500000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 89,
+    "avgCostPerM": 3,
+    "benchScore": 53.4
   },
   "opencode-go/hy3": {
     "enabled": true,
@@ -395,8 +437,10 @@
     "vision": false,
     "contextWindow": 256000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 89,
+    "avgCostPerM": 0.25,
+    "benchScore": 50.1
   },
   "opencode-go/hy4-preview": {
     "enabled": true,
@@ -411,8 +455,10 @@
     "vision": false,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 92,
+    "avgCostPerM": 1.25075,
+    "benchScore": 65.9
   },
   "opencode-go/kimi-k2.7-code": {
     "enabled": true,
@@ -427,8 +473,10 @@
     "vision": true,
     "contextWindow": 262100,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 89,
+    "avgCostPerM": 1.7125,
+    "benchScore": 53.3
   },
   "opencode-go/longcat-2.0": {
     "enabled": true,
@@ -443,8 +491,10 @@
     "vision": false,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 79,
+    "avgCostPerM": 0.5249999999999999,
+    "benchScore": 0
   },
   "opencode-go/longcat-2.5-preview-free": {
     "enabled": true,
@@ -460,8 +510,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "cheap",
+    "priority": 79,
+    "avgCostPerM": 0,
+    "benchScore": 0
   },
   "opencode-go/mimo-v2.5": {
     "enabled": true,
@@ -476,8 +528,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 90,
+    "avgCostPerM": 0.17500000000000002,
+    "benchScore": 50.6
   },
   "opencode-go/mimo-v2.5-pro": {
     "enabled": true,
@@ -493,8 +547,10 @@
     "vision": false,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 89,
+    "avgCostPerM": 0.54375,
+    "benchScore": 50.6
   },
   "opencode-go/mimo-v2.6-flash": {
     "enabled": true,
@@ -510,8 +566,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 92,
+    "avgCostPerM": 0.17500000000000002,
+    "benchScore": 64.2
   },
   "opencode-go/mimo-v2.6-pro": {
     "enabled": true,
@@ -527,8 +585,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 95,
+    "avgCostPerM": 0.54375,
+    "benchScore": 77.4
   },
   "opencode-go/minimax-m2.7": {
     "enabled": true,
@@ -545,8 +605,10 @@
     "vision": false,
     "contextWindow": 204800,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 88,
+    "avgCostPerM": 0.5249999999999999,
+    "benchScore": 45
   },
   "opencode-go/minimax-m3": {
     "enabled": true,
@@ -563,8 +625,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 89,
+    "avgCostPerM": 0.5249999999999999,
+    "benchScore": 50.2
   },
   "opencode-go/muse-spark-1.2-contributor": {
     "enabled": true,
@@ -580,8 +644,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 92,
+    "avgCostPerM": 0.125,
+    "benchScore": 63.3
   },
   "opencode-go/muse-spark-1.3-contributor": {
     "enabled": true,
@@ -597,8 +663,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 92,
+    "avgCostPerM": 0.125,
+    "benchScore": 61.6
   },
   "opencode-go/qwen3.7-plus": {
     "enabled": true,
@@ -613,8 +681,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 90,
+    "avgCostPerM": 0.7000000000000001,
+    "benchScore": 53.2
   },
   "opencode-go/qwen3.8-flash": {
     "enabled": true,
@@ -630,8 +700,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "mid",
+    "priority": 92,
+    "avgCostPerM": 0.22999999999999998,
+    "benchScore": 64.5
   },
   "opencode-go/qwen3.8-max": {
     "enabled": true,
@@ -647,8 +719,10 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "medium-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "standard",
+    "priority": 92,
+    "avgCostPerM": 3,
+    "benchScore": 68.4
   },
   "opencode-go/space-bunny-free": {
     "enabled": true,
@@ -664,7 +738,9 @@
     "vision": true,
     "contextWindow": 1000000,
     "latencyClass": "fast-remote",
-    "costClass": "subscription",
-    "priority": 75
+    "costClass": "cheap",
+    "priority": 79,
+    "avgCostPerM": 0,
+    "benchScore": 0
   }
 }
