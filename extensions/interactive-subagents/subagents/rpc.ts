@@ -82,7 +82,10 @@ function openMonitorWindow(name: string, sessionFile: string): number | undefine
     : terminal === "wezterm" ? [terminal, "start", "--", ...viewArgs]
     : [terminal, "--title", safeName, ...viewArgs]; // foot, kitty
   try {
-    const proc = spawn(argv[0], argv.slice(1), { detached: true, stdio: "ignore", env: process.env });
+    const proc = spawn(argv[0], argv.slice(1), {
+      detached: true, stdio: "ignore",
+      env: { ...process.env, PI_SUBAGENT_VIEW_NAME: safeName },
+    });
     proc.unref();
     return proc.pid;
   } catch { return undefined; }

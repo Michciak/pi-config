@@ -164,5 +164,23 @@ function poll() {
 
 process.on("SIGTERM", () => process.exit(0));
 process.on("SIGINT", () => process.exit(0));
-console.log(`${C.dim}— session view: ${file}${C.reset}`);
+const subagentName = process.env.PI_SUBAGENT_VIEW_NAME ?? "subagent";
+console.log(`${C.bold}◉ subagent: ${subagentName}${C.reset}`);
+console.log(`${C.dim}  session: ${file}${C.reset}`);
+let sessionActive = false;
+let waitingShown = false;
+const baseRender = render;
+render = function (entry) {
+  if (!sessionActive && entry?.type === "message") {
+    sessionActive = true;
+    emit([`${C.green}● sesja aktywna — transkrypt na żywo${C.reset}`]);
+  }
+  return baseRender(entry);
+};
+try {
+  fs.statSync(file);
+} catch {
+  waitingShown = true;
+  console.log(`${C.yellow}○ oczekiwanie na start sesji…${C.reset}`);
+}
 poll();
