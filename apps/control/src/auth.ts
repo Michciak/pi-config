@@ -13,6 +13,15 @@ export function isLoopback(ip: string): boolean {
   return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
 }
 
+export function requireLocalAdmin(request: FastifyRequest): void {
+  if (!isLoopback(request.ip)) {
+    throw Object.assign(new Error("This operation is available only on the Mac running Pi Remote"), {
+      statusCode: 403,
+      code: "LOCAL_ADMIN_REQUIRED",
+    });
+  }
+}
+
 export function randomToken(bytes = 32): string { return randomBytes(bytes).toString("base64url"); }
 
 export function verifyDeviceRequest(store: StateStore, request: FastifyRequest): boolean {

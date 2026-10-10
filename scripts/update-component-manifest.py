@@ -14,10 +14,13 @@ manifest.setdefault("sources", {})["ask-user-question-local"] = "~/.pi/agent/ext
 existing = {item["path"]: item for item in manifest["components"]}
 for relative in (
     "extensions/ask-user-question.ts",
-    "extensions/ask-user-question-contract.ts",
+    "extensions/shared/ask-user-question-contract.ts",
     "extensions/interactive-subagents/rpc-backend.ts",
 ):
     existing.setdefault(relative, {"path": relative})
+stale = "extensions/ask-user-question-contract.ts"
+if stale in existing and not (repo / stale).is_file():
+    del existing[stale]
 for relative, item in existing.items():
     source = repo / relative
     if not source.is_file():

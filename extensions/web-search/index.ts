@@ -1,172 +1,18 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { Text } from "@earendil-works/pi-tui";
-import * as fs from "node:fs";
-import * as path from "node:path";
-
-interface SearchResult {
-	title: string;
-	url: string;
-	snippet: string;
-}
-
-interface StructuredSearchArgs {
-	query?: string;
-	exactPhrases?: string[];
-	excludeTerms?: string[];
-	site?: string;
-	count?: number;
-}
-
-interface BuiltSearchQuery {
-	query: string;
-	baseQuery?: string;
-	exactPhrases: string[];
-	excludeTerms: string[];
-	site?: string;
-}
-
-async function googleSearch(
-	query: string,
-	count: number,
-	apiKey: string,
-	cseId: string,
-	signal?: AbortSignal,
-): Promise<SearchResult[]> {
-	const num = Math.min(count, 10);
-	const url = new URL("https://www.googleapis.com/customsearch/v1");
-	url.searchParams.set("key", apiKey);
-	url.searchParams.set("cx", cseId);
-	url.searchParams.set("q", query);
-	url.searchParams.set("num", String(num));
-
-	const resp = await fetch(url.toString(), { signal });
-	if (!resp.ok) {
-		const body = await resp.text();
-		throw new Error(`Google API ${resp.status}: ${body.slice(0, 200)}`);
-	}
-
-	const data = (await resp.json()) as {
-		items?: Array<{
-			title: string;
-			link: string;
-			snippet?: string;
-		}>;
-	};
-
-	if (!data.items || data.items.length === 0) return [];
-
-	return data.items.map((item) => ({
-		title: item.title,
-		url: item.link,
-		snippet: item.snippet?.replace(/\n/g, " ") ?? "",
-	}));
-}
-
-const EXT_DIR = path.dirname(new URL(import.meta.url).pathname);
-const AUTH_PATH = path.join(EXT_DIR, "auth.json");
-
-function loadCredentials(): { apiKey: string; cseId: string } | null {
-	const envApiKey = process.env.GOOGLE_SEARCH_API_KEY ?? process.env.GOOGLE_API_KEY;
-	const envCseId = process.env.GOOGLE_CSE_ID ?? process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
-	if (envApiKey && envCseId) return { apiKey: envApiKey, cseId: envCseId };
-
-	if (!fs.existsSync(AUTH_PATH)) return null;
-	try {
-		const config = JSON.parse(fs.readFileSync(AUTH_PATH, "utf-8"));
-		const apiKey = config.google_search_api_key as string;
-		const cseId = config.google_cse_id as string;
-		if (apiKey && cseId) return { apiKey, cseId };
-	} catch {}
-	return null;
-}
-
-function formatResults(results: SearchResult[]): string {
-	if (results.length === 0) return "No results found.";
-	return results
-		.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`)
-		.join("\n\n");
-}
-
-function stripWrappingQuotes(value: string): string {
-	return value.length >= 2 && value.startsWith('"') && value.endsWith('"')
-		? value.slice(1, -1).trim()
-		: value;
-}
-
-function cleanItems(values?: string[]): string[] {
-	if (!values) return [];
-	return values
-		.map((value) => stripWrappingQuotes(value.trim().replace(/\s+/g, " ")))
-		.filter(Boolean);
-}
-
-function cleanQuery(value?: string): string | undefined {
-	if (typeof value !== "string") return undefined;
-	const cleaned = value.trim().replace(/\s+/g, " ");
-	return cleaned || undefined;
-}
-
-function normalizeSite(site?: string): string | undefined {
-	if (typeof site !== "string") return undefined;
-
-	let value = site.trim().replace(/^site:/i, "").trim();
-	if (!value) return undefined;
-
-	try {
-		const candidate = /^[a-z]+:\/\//i.test(value)
-			? value
-			: `https://${value}`;
-		const url = new URL(candidate);
-		if (url.hostname) value = url.hostname;
-	} catch {}
-
-	return value.replace(/\/+$/, "") || undefined;
-}
-
-function quoteForSearch(value: string): string {
-	return `"${value.replace(/"/g, '\\"')}"`;
-}
-
-function buildSearchQuery(args: StructuredSearchArgs): BuiltSearchQuery {
-	const baseQuery = cleanQuery(args.query);
-	const exactPhrases = cleanItems(args.exactPhrases);
-	const excludeTerms = cleanItems(args.excludeTerms);
-	const site = normalizeSite(args.site);
-
-	if (!baseQuery && exactPhrases.length === 0) {
-		throw new Error(
-			"At least one of 'query' or 'exactPhrases' is required.",
-		);
-	}
-
-	const parts: string[] = [];
-	if (baseQuery) parts.push(baseQuery);
-	for (const phrase of exactPhrases) {
-		parts.push(quoteForSearch(phrase));
-	}
-	for (const term of excludeTerms) {
-		parts.push(`-${term.includes(" ") ? quoteForSearch(term) : term}`);
-	}
-	if (site) {
-		parts.push(`site:${site}`);
-	}
-
-	return {
-		query: parts.join(" "),
-		baseQuery,
-		exactPhrases,
-		excludeTerms,
-		site,
-	};
-}
+import {
+	buildSearchQuery,
+	executeSearch,
+	type StructuredSearchArgs,
+} from "./parsers.ts";
 
 export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_search",
 		label: "Web Search",
 		description:
-			"Search the web via Google Custom Search API. Build one search per call from a base query string, exact phrases, exclusions, and an optional site. Returns title, URL, and snippet.",
+			"Search the web (DuckDuckGo, then Mojeek). Build one search per call from a base query string, exact phrases, exclusions, and an optional site. Returns title, URL, and snippet.",
 		promptSnippet:
 			"Search the web via a query string plus optional exactPhrases, excludeTerms, and site. Use one tool call per search angle.",
 		promptGuidelines: [
@@ -184,7 +30,7 @@ export default function (pi: ExtensionAPI) {
 			exactPhrases: Type.Optional(
 				Type.Array(Type.String(), {
 					description:
-						"Exact phrases to match. Each item becomes a quoted phrase in the final Google query.",
+						"Exact phrases to match. Each item becomes a quoted phrase in the final search query.",
 				}),
 			),
 			excludeTerms: Type.Optional(
@@ -209,39 +55,7 @@ export default function (pi: ExtensionAPI) {
 		}),
 
 		async execute(_toolCallId, params: StructuredSearchArgs, signal) {
-			const creds = loadCredentials();
-			if (!creds) {
-				throw new Error(
-					`Missing Google Custom Search credentials. Set GOOGLE_SEARCH_API_KEY and GOOGLE_CSE_ID, or create ${AUTH_PATH} from auth.example.json. Get credentials from https://developers.google.com/custom-search/v1/introduction`,
-				);
-			}
-
-			const count = params.count ?? 5;
-			const built = buildSearchQuery(params);
-			const results = await googleSearch(
-				built.query,
-				count,
-				creds.apiKey,
-				creds.cseId,
-				signal,
-			);
-
-			return {
-				content: [
-					{
-						type: "text" as const,
-						text: formatResults(results),
-					},
-				],
-				details: {
-					composedQuery: built.query,
-					query: built.baseQuery,
-					exactPhrases: built.exactPhrases,
-					excludeTerms: built.excludeTerms,
-					site: built.site,
-					resultCount: results.length,
-				},
-			};
+			return executeSearch(params, signal);
 		},
 
 		renderCall(args, theme, context) {

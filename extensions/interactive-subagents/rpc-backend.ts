@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, unlinkSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, unlinkSync } from "node:fs";
 import { createServer, type Server, Socket } from "node:net";
 import { homedir } from "node:os";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RpcClient, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { selectSubagentModel, ref as modelRef } from "./routing.ts";
+import {createSettlement} from "./settlement.ts";
 
 interface AgentProfile {
   name: string;
@@ -48,6 +49,13 @@ const questions = new Map<string, ParentQuestion[]>();
 let context: ExtensionContext | undefined;
 let questionServer: Server | undefined;
 let questionSocketPath: string | undefined;
+let generation = 0;
+const cancellations = new Set<() => void>();
+const jobs = new Set<Promise<void>>();
+
+function reportBackendError(error: unknown): void {
+  console.error(`${new Date().toISOString()} RPC subagent backend: ${String(error)}`);
+}
 
 function frontmatterValue(frontmatter: string, key: string): string | undefined {
   return frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim();
@@ -93,13 +101,14 @@ function profiles(): AgentProfile[] {
   return [...found.values()].filter((profile) => !allowed || allowed.has(profile.name));
 }
 
+// Sessions may live in any directory now, so subagent cwd only has to be an
+// existing directory — it is no longer bound to the default workspace root.
 function safeCwd(input: string | undefined, fallback: string): string {
-  const root = realpathSync(process.env.PI_WEB_WORKSPACE_ROOT ?? fallback);
-  const candidate = realpathSync(resolve(input || fallback));
-  const rel = relative(root, candidate);
-  if (rel === ".." || rel.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) || rel.startsWith("/")) {
-    throw new Error(`Subagent cwd is outside the allowed workspace root: ${candidate}`);
-  }
+  const raw = input?.startsWith("~/") ? join(homedir(), input.slice(2)) : resolve(input || fallback);
+  let candidate: string;
+  try { candidate = realpathSync(raw); }
+  catch { throw new Error(`Subagent cwd does not exist: ${raw}`); }
+  if (!statSync(candidate).isDirectory()) throw new Error(`Subagent cwd is not a directory: ${candidate}`);
   return candidate;
 }
 
@@ -112,7 +121,7 @@ function uniqueName(requested: string): string {
 
 function updateWidget(): void {
   if (!context) return;
-  for (const item of running.values()) context.ui.setWidget(`remote-subagent:${item.id}`, [JSON.stringify({id:item.id,name:item.name,agent:item.agent,model:item.model,status:item.status,sessionFile:item.sessionFile,liveMessage:item.liveMessage})]);
+  for (const item of running.values()) context.ui.setWidget(`remote-subagent:${item.id}`, [JSON.stringify({id:item.id,parentId:process.env.PI_SUBAGENT_RUN_ID??null,name:item.name,agent:item.agent,model:item.model,status:item.status,sessionFile:item.sessionFile,liveMessage:item.liveMessage})]);
   const rows = [...running.values()].filter((item) => item.status !== "completed").map((item) =>
     `${item.status === "running" ? "●" : item.status === "waiting" ? "?" : "○"} ${item.name} · ${item.agent} · ${item.status}`,
   );
@@ -218,6 +227,8 @@ function registerAskQuestion(pi: ExtensionAPI): void {
 }
 
 function cliPath(): string {
+  // Nested Remote agents must use the same release-local SDK fixes as their parent.
+  if(process.env.PI_WEB_SESSION_ID && process.env.PI_WEB_CLI_PATH) return process.env.PI_WEB_CLI_PATH;
   const entry = fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"));
   return join(dirname(entry), "cli.js");
 }
@@ -262,76 +273,110 @@ function forwardChildUi(pi: ExtensionAPI, agent: RunningAgent, client: RpcClient
   }
 }
 
-async function runAgent(pi: ExtensionAPI, agent: RunningAgent, prompt: string, sessionFile?: string): Promise<void> {
-  if (!context || !questionSocketPath) throw new Error("RPC subagent backend is not initialized");
+async function runAgent(pi: ExtensionAPI, agent: RunningAgent, prompt: string, sessionFile: string | undefined, createClient: (options: ConstructorParameters<typeof RpcClient>[0]) => RpcClient): Promise<void> {
+  const owner=generation, ownerContext=context;
+  const alive=()=>owner===generation && !!ownerContext && context===ownerContext;
+  let client: RpcClient | undefined;
+  let unsubscribe = () => {};
+  const {outcome:settled,finish} = createSettlement();
+  const cancel=()=>finish(new Error("Subagent cancelled by session shutdown"));
+  cancellations.add(cancel);
+  try {
+  if (!ownerContext || !questionSocketPath) throw new Error("RPC subagent backend is not initialized");
   agent.status = "starting";
   updateWidget();
-  const client = new RpcClient({
+  client = createClient({
     cliPath: cliPath(), cwd: agent.cwd,
     env: {
       PI_SUBAGENT_TRANSPORT: "rpc",
       PI_SUBAGENT_PARENT_SOCKET: questionSocketPath,
       PI_SUBAGENT_NAME: agent.name,
+      PI_SUBAGENT_RUN_ID: agent.id,
       PI_SUBAGENT_AGENT: agent.agent,
       PI_SUBAGENT_DEPTH: String(Number(process.env.PI_SUBAGENT_DEPTH ?? "0") + 1),
       PI_SUBAGENT_ALLOWED: agent.profile.subagents.join(","),
-      PI_WEB_WORKSPACE_ROOT: process.env.PI_WEB_WORKSPACE_ROOT ?? context.cwd,
+      PI_WEB_WORKSPACE_ROOT: process.env.PI_WEB_WORKSPACE_ROOT ?? ownerContext.cwd,
       PI_ASK_USER_SOCKET: process.env.PI_ASK_USER_SOCKET ?? "",
       PI_WEB_SESSION_ID: process.env.PI_WEB_SESSION_ID ?? "",
       PI_WEB_SUBAGENT_SESSIONS_DIR: process.env.PI_WEB_SUBAGENT_SESSIONS_DIR ?? "",
     },
-    args: childArgs(agent, sessionFile, context),
+    args: childArgs(agent, sessionFile, ownerContext),
   });
   agent.client = client;
-  const settled = new Promise<void>((resolvePromise, reject) => {
-    const unsubscribe = client.onEvent((event: any) => {
+  // Exit can happen during start/getState/prompt, before the waiter is awaited.
+  // Resolve with an outcome instead of leaving an early rejected promise unhandled.
+  unsubscribe = client.onEvent((event: any) => {
+      if(!alive()) return;
+      try {
       if(event.type === "message_update") { agent.liveMessage=event.message ?? event.assistantMessageEvent?.partial; if(Date.now()-(agent.lastPublish??0)>300){agent.lastPublish=Date.now();updateWidget();} }
       if(event.type === "message_end") {agent.liveMessage=undefined;updateWidget();}
       if (event.type === "agent_start") { agent.status = "running"; updateWidget(); }
-      if (event.type === "extension_ui_request") forwardChildUi(pi, agent, client, event);
-      if (event.type === "agent_settled") { unsubscribe(); resolvePromise(); }
-    });
-    (agent as any).rejectExit = reject;
+      if (event.type === "extension_ui_request") forwardChildUi(pi, agent, client!, event);
+      if (event.type === "agent_settled") { unsubscribe(); finish(); }
+      } catch(error) {finish(error instanceof Error ? error : new Error(String(error)));}
   });
-  try {
     await client.start();
+    if(!alive()) return;
     const child = (client as unknown as { process?: { once(event: string, listener: (code: unknown) => void): unknown } }).process;
-    child?.once("exit", (code: unknown) => (agent as any).rejectExit?.(new Error(`Nested Pi exited before settling (${code})`)));
+    child?.once("exit", (code: unknown) => finish(new Error(`Nested Pi exited before settling (${code})`)));
     const state = await client.getState();
+    if(!alive()) return;
     agent.sessionFile = state.sessionFile;
     if(state.model) agent.model = `${state.model.provider}/${state.model.id}`;
     updateWidget();
     await client.prompt(prompt);
-    await settled;
+    const failure = await settled;
+    if(!alive()) return;
+    if (failure) throw failure;
+    const messages=await client.getMessages();
+    const lastAssistant=[...messages].reverse().find((message:any)=>message.role==="assistant");
+    if(lastAssistant?.stopReason==="error") throw new Error(lastAssistant.errorMessage??"Subagent provider failed");
+    if(lastAssistant?.stopReason==="aborted") throw new Error("Subagent turn was aborted");
     agent.result = await client.getLastAssistantText() ?? "Subagent finished without a text result.";
     agent.status = "completed";
     const stats = await client.getSessionStats().catch(() => undefined);
+    if(!alive()) return;
     pi.sendMessage({
       customType: "subagent_result", content: `Subagent "${agent.name}" completed:\n\n${agent.result}`,
       display: true, details: { id: agent.id, name: agent.name, agent: agent.agent, task: agent.task, model: agent.model, sessionFile: agent.sessionFile, stats },
     }, { triggerTurn: true, deliverAs: "steer" });
   } catch (error) {
-    agent.status = "error";
+    if(!alive()) return;
+    agent.status = agent.result===undefined ? "error" : "completed";
     agent.error = error instanceof Error ? error.message : String(error);
-    pi.sendMessage({ customType: "subagent_result", content: `Subagent "${agent.name}" failed: ${agent.error}`, display: true,
-      details: { id: agent.id, name: agent.name, agent: agent.agent, error: agent.error } }, { triggerTurn: true, deliverAs: "steer" });
+    // The delivery API itself can fail after reload. Never recurse into it uncaught.
+    try { pi.sendMessage({ customType: "subagent_result", content: agent.result===undefined ? `Subagent "${agent.name}" failed: ${agent.error}` : `Subagent "${agent.name}" completed. Result delivery encountered an error (${agent.error}); do not repeat its completed work.\n\n${agent.result}`, display: true,
+      details: { id: agent.id, name: agent.name, agent: agent.agent, error: agent.error, status:agent.status } }, { triggerTurn: true, deliverAs: "steer" }); }
+    catch(deliveryError) { reportBackendError(deliveryError); }
   } finally {
-    await client.stop().catch(() => {});
+    cancellations.delete(cancel);
+    try {unsubscribe();} catch(error) {reportBackendError(error);}
+    await client?.stop().catch(reportBackendError);
     agent.client = undefined;
-    updateWidget();
+    if(alive()) {try {updateWidget();} catch(error) {reportBackendError(error);}}
   }
 }
 
-export function registerRpcSubagents(pi: ExtensionAPI): void {
+export function registerRpcSubagents(pi: ExtensionAPI, createClient = (options: ConstructorParameters<typeof RpcClient>[0]) => new RpcClient(options)): void {
+  const launch=(agent: RunningAgent,prompt:string,file?:string)=>{
+    const job=runAgent(pi,agent,prompt,file,createClient).catch(reportBackendError);
+    jobs.add(job);void job.then(()=>jobs.delete(job));
+  };
   registerAskQuestion(pi);
   pi.on("session_start", async (_event, ctx) => {
+    generation++;
     context = ctx;
     const isTopLevel = !process.env.PI_SUBAGENT_PARENT_SOCKET;
     const maySpawn = list(process.env.PI_SUBAGENT_ALLOWED).length > 0;
     if (isTopLevel || maySpawn) await listenForChildQuestions(pi);
   });
   pi.on("session_shutdown", async () => {
-    for (const agent of running.values()) await agent.client?.stop().catch(() => {});
+    // Invalidate captured APIs before stopping children (exit/settled events race here).
+    generation++; context=undefined;
+    for(const cancel of cancellations) cancel();
+    for(const pending of questions.values()) for(const item of pending) item.socket.destroy();
+    await Promise.all([...running.values()].map(agent=>agent.client?.stop().catch(reportBackendError)));
+    await Promise.all([...jobs]);
     running.clear(); questions.clear();
     if (questionServer) await new Promise<void>((resolvePromise) => questionServer!.close(() => resolvePromise()));
     if (questionSocketPath && existsSync(questionSocketPath)) unlinkSync(questionSocketPath);
@@ -349,10 +394,10 @@ export function registerRpcSubagents(pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "subagent", label: "RPC subagent",
-    description: "Start a nested Pi RPC subagent. The result is delivered automatically to this orchestrator as a steer message.",
+    description: "Start a nested Pi RPC subagent. Choose the model for the concrete task, complexity, modalities and verified capabilities, not for sameness or diversity relative to the orchestrator. Omit model for automatic task-based routing from the authenticated active scope. Set model for a justified task-fit choice or a user-requested model. The result is delivered automatically as a system steer message, not a new user task.",
     parameters: Type.Object({
       agent: Type.String(), task: Type.String({ minLength: 1 }), name: Type.Optional(Type.String()),
-      model: Type.Optional(Type.String()), cwd: Type.Optional(Type.String()),
+      model: Type.Optional(Type.String({description:"Exact scoped provider/model justified by task fit or explicitly selected by the user. Omit for automatic task-based selection."})), cwd: Type.Optional(Type.String()),
     }),
     async execute(_id, params, _signal, _update, ctx) {
       const profile = profiles().find((item) => item.name === params.agent);
@@ -364,7 +409,7 @@ export function registerRpcSubagents(pi: ExtensionAPI): void {
         cwd: safeCwd(params.cwd, ctx.cwd), model, profile, status: "starting", startedAt: Date.now(),
       };
       running.set(name, item);
-      void runAgent(pi, item, params.task);
+      launch(item, params.task);
       return { content: [{ type: "text" as const, text: `Subagent "${name}" started through nested Pi RPC. Its result will arrive automatically.` }],
         details: { id: item.id, name, agent: profile.name, model, status: "started" } };
     },
@@ -391,7 +436,7 @@ export function registerRpcSubagents(pi: ExtensionAPI): void {
       }
       if (!item.sessionFile) return { isError: true, details: {status:"error", name:params.name ?? "unknown"}, content: [{ type: "text" as const, text: `Subagent "${item.name}" has no resumable session.` }] };
       item.task = params.message; item.startedAt = Date.now(); item.result = undefined; item.error = undefined;
-      void runAgent(pi, item, params.message, item.sessionFile);
+      launch(item, params.message, item.sessionFile);
       return { content: [{ type: "text" as const, text: `Resumed subagent "${item.name}" through Pi RPC.` }], details: { status: "resumed", name: item.name } };
     },
   });

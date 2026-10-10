@@ -1,5 +1,7 @@
 import importlib.util
 import io
+import plistlib
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -29,6 +31,25 @@ class ReadinessTests(unittest.TestCase):
     def test_timeout_provides_log_location(self):
         with self.assertRaisesRegex(RuntimeError, 'within 2s.*control.stderr.log'):
             self.simulate(100, 2)
+
+    def restart_fixture(self, registrations):
+        config = plistlib.dumps({'EnvironmentVariables': {'PI_WEB_RUNTIME_DIR': '/tmp/pi-restart-fixture'}})
+        with patch.object(restart, 'PLIST') as plist, patch.object(restart, 'loaded', **registrations), patch.object(restart, 'stop_detached'), patch.object(restart, 'start_detached', return_value=12345) as fallback, patch.object(restart.time, 'sleep'), patch.object(restart.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)) as run, patch('builtins.print'):
+            plist.open.return_value.__enter__.return_value = io.BytesIO(config)
+            mode = restart.restart_service()
+            return mode, fallback.call_count, [call.args[0] for call in run.call_args_list]
+
+    def test_success_exit_without_registration_uses_verified_fallback(self):
+        mode, fallbacks, commands = self.restart_fixture({'return_value': False})
+        self.assertEqual(mode, 'detached')
+        self.assertEqual(fallbacks, 1)
+        self.assertEqual(sum(command[1] == 'bootstrap' for command in commands), 3)
+
+    def test_verified_bootstrap_does_not_kill_fresh_registration(self):
+        mode, fallbacks, commands = self.restart_fixture({'side_effect': [False, True, True]})
+        self.assertEqual(mode, 'launchd')
+        self.assertEqual(fallbacks, 0)
+        self.assertFalse(any('kickstart' in command for command in commands))
 
 if __name__ == '__main__':
     unittest.main()

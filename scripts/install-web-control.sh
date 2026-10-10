@@ -9,7 +9,7 @@ if [[ -f package-lock.json ]]; then
 else
   npm install
 fi
-npm run build
+npm run build:release
 python3 "$repo/scripts/install-web-control.py"
 python3 "$repo/scripts/restart-web-control.py"
 

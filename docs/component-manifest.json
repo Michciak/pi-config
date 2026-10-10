@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-28",
+  "generated": "2026-09-29",
   "sources": {
     "pi-config": "https://github.com/amosblomqvist/pi-config",
     "pi-interactive-subagents": "https://github.com/amosblomqvist/pi-interactive-subagents",
@@ -52,14 +52,9 @@
       "bytes": 4627
     },
     {
-      "path": "extensions/ask-user-question-contract.ts",
-      "sha256": "f1ffdfdc5839d759155a318d55c2595afa729c356cb1989bc0da925239cb2a91",
-      "bytes": 3551
-    },
-    {
       "path": "extensions/ask-user-question.ts",
-      "sha256": "95b5543ec949f1f77e61c6fdded7f8bcdd80799a293da25b7e053a034dff70d6",
-      "bytes": 20232
+      "sha256": "80866cecc329e5580380279a4beeeecda7d379f913650de9ebe88d272fc82afb",
+      "bytes": 20239
     },
     {
       "path": "extensions/bash-guard/README.md",
@@ -158,8 +153,8 @@
     },
     {
       "path": "extensions/interactive-subagents/rpc-backend.ts",
-      "sha256": "bd6852e39f4fc71d0a66e3f437cfabd2191b89c27b02fed71eb07ef5b8cd5d70",
-      "bytes": 19124
+      "sha256": "b05ba95e5fc5884766082d2852de3ac04c6bd1135278349cef99d9cd51b42f6f",
+      "bytes": 20295
     },
     {
       "path": "extensions/interactive-subagents/session.ts",
@@ -210,6 +205,11 @@
       "path": "extensions/prompt-snippets/snippets/session-kickoff.md",
       "sha256": "0ccc04bb82fd940c28566adfcc690604f343a4e19cabe937f92028d56af9f801",
       "bytes": 279
+    },
+    {
+      "path": "extensions/shared/ask-user-question-contract.ts",
+      "sha256": "4e8e350c566cdf9791a72e94baebdf6c3c5ee24f0303790f12d6aabd612b3504",
+      "bytes": 3700
     },
     {
       "path": "extensions/web-fetch/index.ts",

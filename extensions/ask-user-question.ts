@@ -21,7 +21,7 @@ import {
 	type AskOption,
 	type AskUserQuestionMode,
 	type AskUserQuestionResultDetails,
-} from "./ask-user-question-contract.ts";
+} from "./shared/ask-user-question-contract.ts";
 
 interface DisplayOption extends AskOption {
 	id: string;

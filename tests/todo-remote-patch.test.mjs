@@ -1,0 +1,27 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import vm from "node:vm";
+import {readFileSync} from "node:fs";
+import {homedir} from "node:os";
+import {join} from "node:path";
+import ts from "typescript";
+import {patchTodoRemote} from "../scripts/todo-remote-patch.mjs";
+test("native TODO clear is Remote-only, durable and idempotent without a model turn",()=>{
+ const root=join(homedir(),".pi/agent/npm/node_modules/@juicesharp/rpiv-todo");
+ const source=readFileSync(join(root,"todo.ts"),"utf8"),replay=readFileSync(join(root,"state/replay.ts"),"utf8");
+ const patched=patchTodoRemote(source,replay);assert.deepEqual(patchTodoRemote(patched.source,patched.replay),patched);
+ assert.throws(()=>patchTodoRemote("unknown","unknown"),/Unsupported/);
+ const marker=patched.source.indexOf('/*pi-remote-todo-clear-v1*/');
+ const body=patched.source.slice(marker,patched.source.indexOf('if (!ctx.hasUI)',marker));
+ const persisted=[],notices=[];let state={tasks:[{id:"1",status:"completed"}],nextId:2};
+ const context={process:{env:{PI_WEB_SESSION_ID:"fixture"}},_args:"clear",ctx:{ui:{notify:t=>notices.push(t)}},pi:{appendEntry:(customType,data)=>persisted.push({type:"custom",customType,data})},sid:()=>"fixture",getState:()=>state,applyTaskMutation:(s,a)=>{assert.equal(a,"clear");return {state:{tasks:[],nextId:1}}},commitState:(id,s)=>state=s};
+ vm.runInNewContext('(function(){'+body+'})()',context);
+ assert.equal(state.tasks.length,0);assert.equal(persisted.length,1);assert.equal(notices.length,1);
+ delete context.process.env.PI_WEB_SESSION_ID;vm.runInNewContext('(function(){'+body+'})()',context);assert.equal(persisted.length,1);
+ const module={exports:{}};
+ const code=ts.transpileModule(patched.replay,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+ vm.runInNewContext(code,{exports:module.exports,module,process:{env:{PI_WEB_SESSION_ID:"fixture"}},require:()=>({EMPTY_STATE:{tasks:[],nextId:1}})});
+ const branch=[{type:"message",message:{role:"toolResult",toolName:"todo",details:{tasks:[{id:"old"}],nextId:2}}},...persisted];
+ const restored=module.exports.replayFromBranch({sessionManager:{getBranch:()=>branch}});
+ assert.equal(restored.tasks.length,0);assert.equal(restored.nextId,1);
+});

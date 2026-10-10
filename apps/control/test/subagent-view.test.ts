@@ -5,18 +5,32 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {StateStore} from '../src/store.js';
 import {EngineManager} from '../src/engine.js';
-test('subagent view reads managed transcript and makes idle parent active',()=>{
+test('subagent view reads managed transcript and makes idle parent active',async()=>{
  const root=mkdtempSync(join(tmpdir(),'pi-child-view-')); const sub=join(root,'subagents');mkdirSync(sub);
  const file=join(sub,'child.jsonl');writeFileSync(file,JSON.stringify({type:'message',message:{role:'assistant',content:'working'}})+'\n');
  const store=new StateStore(':memory:');
  store.upsertSession({id:'parent',name:'test',workspace:root,status:'idle',createdAt:'now',updatedAt:'now'});
  store.db.prepare('INSERT INTO subagent_runs VALUES(?,?,?)').run('child','parent',JSON.stringify({id:'child',name:'worker',status:'running',model:'cursor/grok',sessionFile:file}));
- const engine=Object.create(EngineManager.prototype) as any;Object.assign(engine,{store,config:{sessionsDir:root},childLive:new Map()});
+ const engine=Object.create(EngineManager.prototype) as any;Object.assign(engine,{store,config:{sessionsDir:root},childLive:new Map(),running:new Map([['parent',{}]])});
  assert.equal(engine.sessions()[0].status,'running');
- assert.equal(engine.subagentRuns('parent')[0].messages[0].content,'working');
+ assert.equal((await engine.subagentRuns('parent'))[0].messages[0].content,'working');
  const outside=join(root,'outside.jsonl');writeFileSync(outside,JSON.stringify({type:'message',message:{content:'secret'}}));
  const escape=join(sub,'escape.jsonl');symlinkSync(outside,escape);
  store.db.prepare('UPDATE subagent_runs SET metadata=?').run(JSON.stringify({id:'child',status:'completed',sessionFile:escape}));
- assert.deepEqual(engine.subagentRuns('parent')[0].messages,[]);
+ assert.deepEqual((await engine.subagentRuns('parent'))[0].messages,[]);
  assert.equal(engine.sessions()[0].status,'idle');store.db.close();
+});
+test('ACP shares the child view with accurate model and cannot escape its transcript root',async()=>{
+ const root=mkdtempSync(join(tmpdir(),'pi-acp-view-'));
+ const acp=join(tmpdir(),'acp-delegate');mkdirSync(acp,{recursive:true});
+ const owned=mkdtempSync(join(acp,'test-view-'));const file=join(owned,'run.session.jsonl');
+ writeFileSync(file,[{type:'model_change',provider:'test',modelId:'actual-model'},{type:'message',message:{role:'assistant',content:'ACP output'}}].map(e=>JSON.stringify(e)).join('\n'));
+ const store=new StateStore(':memory:');
+ store.db.prepare('INSERT INTO subagent_runs VALUES(?,?,?)').run('acp:run','parent',JSON.stringify({id:'acp:run',transport:'acp',status:'completed',sessionFile:file}));
+ const engine=Object.create(EngineManager.prototype) as any;Object.assign(engine,{store,config:{sessionsDir:root},childLive:new Map()});
+ assert.equal((await engine.subagentRuns('parent'))[0].model,'test/actual-model');assert.equal((await engine.subagentRuns('parent'))[0].messages[0].content,'ACP output');
+ const outside=join(root,'secret.jsonl');writeFileSync(outside,JSON.stringify({type:'message',message:{content:'secret'}}));
+ const link=join(owned,'escape.session.jsonl');symlinkSync(outside,link);
+ store.db.prepare('UPDATE subagent_runs SET metadata=?').run(JSON.stringify({id:'acp:run',transport:'acp',sessionFile:link}));
+ assert.deepEqual((await engine.subagentRuns('parent'))[0].messages,[]);store.close();
 });

@@ -17,4 +17,7 @@ apps/android/*.keystore
 *.log
 .DS_Store
 __pycache__/
+.releases/
+test-results/
+playwright-report/
 *.pyc

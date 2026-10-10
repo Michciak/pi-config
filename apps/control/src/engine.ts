@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import { readFileSync, copyFileSync, existsSync, mkdirSync, realpathSync, unlinkSync } from "node:fs";
-import { homedir } from "node:os";
+import { readFileSync, copyFileSync, existsSync, mkdirSync, realpathSync, unlinkSync, appendFileSync, statSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RpcClient } from "@earendil-works/pi-coding-agent";
@@ -11,7 +11,13 @@ import type { ControlConfig } from "./config.js";
 import { EventBus } from "./events.js";
 import { InteractionBroker } from "./interactions.js";
 import { StateStore } from "./store.js";
+import { redactLog } from "./diagnostics.js";
+import { applyExtensionEvent, sanitizeTerminalText } from "./extension-adapters.js";
 import { resolveOutputUnderWorkspace, resolveWorkspace } from "./workspace.js";
+import { extensionInventory } from "./extensions.js";
+import {attachPromptFiles} from "./prompt-attachments.js";
+import {childTranscript} from "./child-transcripts.js";
+import {sharedRpcRead,rpcTimeoutError} from "./rpc-reads.js";
 
 interface RuntimeSession {
   summary: SessionSummary;
@@ -21,6 +27,18 @@ interface RuntimeSession {
 }
 
 function now(): string { return new Date().toISOString(); }
+
+export async function awaitStartupState<T>(read: () => Promise<T>, attempts = 3): Promise<T> {
+  let last: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try { return await read(); }
+    catch (error) {
+      last = error;
+      if (!String(error).includes("Timeout waiting for response") || attempt === attempts - 1) throw error;
+    }
+  }
+  throw last;
+}
 
 export class EngineManager {
   private statusValue: EngineStatus = "stopped";
@@ -37,8 +55,6 @@ export class EngineManager {
     private readonly interactions: InteractionBroker,
   ) {
     const packageEntry = fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"));
-    this.store.db.exec("CREATE TABLE IF NOT EXISTS subagent_runs (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, metadata TEXT NOT NULL)");
-    this.store.db.exec("UPDATE subagent_runs SET metadata=json_set(metadata,'$.status','interrupted') WHERE json_extract(metadata,'$.status') IN ('running','starting','waiting')");
     this.cliPath = join(dirname(packageEntry), "cli.js");
   }
 
@@ -72,7 +88,10 @@ export class EngineManager {
 
   sessions(): SessionSummary[] {
     const active = new Set((this.store.db.prepare("SELECT DISTINCT session_id FROM subagent_runs WHERE json_extract(metadata,'$.status') IN ('running','starting','waiting')").all() as any[]).map(row=>row.session_id));
-    return this.store.sessions().map(session=>active.has(session.id) && session.status === "idle" ? {...session,status:"running"} : session);
+    return this.store.sessions().map(session=>this.running.has(session.id) && active.has(session.id) && session.status === "idle" ? {...session,status:"running"} : session);
+  }
+  processIds(): number[] {
+    return [...this.running.values()].flatMap(runtime=>{const pid=(runtime.client as any).process?.pid;return typeof pid==="number"?[pid]:[];});
   }
 
   subagents(id: string): SubagentProfile[] {
@@ -81,17 +100,22 @@ export class EngineManager {
     return discoverSubagents(summary.workspace);
   }
 
-  subagentRuns(id:string): any[] {
-    return (this.store.db.prepare("SELECT metadata FROM subagent_runs WHERE session_id=?").all(id) as any[]).map(row => {
-      const item=JSON.parse(row.metadata); let messages:any[]=[];
-      try {
-        const root=realpathSync(join(this.config.sessionsDir,"subagents"));
-        const path=realpathSync(item.sessionFile); const rel=relative(root,path);
-        if(rel.startsWith("..") || rel.startsWith("/")) throw new Error("outside");
-        messages=readFileSync(path,"utf8").split("\n").flatMap(line=>{try{const entry=JSON.parse(line);return entry.type==="message"?[entry.message]:[];}catch{return [];}}).slice(-200);
-      }catch{}
-      return {...item,messages,liveMessage:this.childLive.get(item.id)};
-    });
+  async subagentRuns(id:string): Promise<any[]> {
+    const rows=this.store.db.prepare("SELECT metadata FROM subagent_runs WHERE session_id=?").all(id) as any[];
+    const results:any[]=[];
+    // Bound concurrent file buffers rather than opening every historical run at once.
+    for(let offset=0;offset<rows.length;offset+=4)results.push(...await Promise.all(rows.slice(offset,offset+4).map(async row=>{
+      const item=JSON.parse(row.metadata);
+      const root=item.transport === "acp" ? join(tmpdir(),"acp-delegate") : join(this.config.sessionsDir,"subagents");
+      const transcript=await childTranscript(root,item.sessionFile);
+      return {...item,...(item.transport==="acp"&&transcript.model?{model:transcript.model}:{}),messages:transcript.messages,liveMessage:this.childLive.get(item.id)};
+    })));
+    return results;
+  }
+
+  extensionUiState(id: string): any {
+    if (!this.store.session(id)) throw Object.assign(new Error("Session not found"), { statusCode: 404 });
+    return this.store.extensionUiState(id);
   }
 
   async createSession(input: { workspace: string; name?: string; sessionPath?: string }): Promise<SessionSummary> {
@@ -115,6 +139,28 @@ export class EngineManager {
     if (!summary) throw Object.assign(new Error("Session not found"), { statusCode: 404 });
     await this.launch(summary, summary.sessionFile);
     return this.store.session(id)!;
+  }
+
+  async reask(id: string, entryId: string, message: string): Promise<SessionSummary> {
+    const runtime = this.running.get(id);
+    if (!runtime) throw Object.assign(new Error("Session is not running"), { statusCode:409 });
+    const state = await runtime.client.getState();
+    if (state.isStreaming || state.pendingMessageCount) throw Object.assign(new Error("Wait for Pi to settle before editing history"), {statusCode:409});
+    if (!message.trim() || !state.sessionFile) throw Object.assign(new Error("Message and session file are required"), {statusCode:400});
+    const choices = await runtime.client.getForkMessages();
+    if (!choices.some(item=>item.entryId===entryId)) throw Object.assign(new Error("User entry not found"),{statusCode:404});
+    // Fork a copy, never replace the source session's selected branch.
+    const dir=join(this.config.sessionsDir,"forks");
+    mkdirSync(dir,{recursive:true,mode:0o700});
+    const path=join(dir,randomUUID()+".jsonl");
+    copyFileSync(this.resolveOwnedSession(state.sessionFile),path);
+    const session=await this.createSession({workspace:runtime.summary.workspace,name:runtime.summary.name+" · fork",sessionPath:path});
+    try {
+      const result=await this.execute(session.id,{command:"fork",payload:{entryId}}) as any;
+      if (result?.cancelled) throw new Error("Pi cancelled the fork");
+      await this.execute(session.id,{command:"prompt",payload:{message}});
+      return this.store.session(session.id)!;
+    } catch(error) { await this.stopSession(session.id,true); throw error; }
   }
 
   async stopSession(id: string, interrupted = false): Promise<void> {
@@ -156,11 +202,40 @@ export class EngineManager {
   }
 
   async execute(id: string, request: SessionCommand): Promise<unknown> {
+    try {
+      const client=this.running.get(id)?.client;
+      if(client && ["get_messages_page","get_messages","get_state","get_commands","get_available_models","get_available_thinking_levels","get_session_stats"].includes(request.command))
+        return await sharedRpcRead(client,JSON.stringify(request),()=>this.executeCommand(id,request),["get_commands","get_available_models"].includes(request.command)?1000:0);
+      return await this.executeCommand(id,request);
+    } catch(error) {throw rpcTimeoutError(error,request.command.startsWith("get_"));}
+  }
+
+  private async executeCommand(id: string, request: SessionCommand): Promise<unknown> {
     const runtime = this.running.get(id);
     if (!runtime) throw Object.assign(new Error("Session is not running"), { statusCode: 409 });
     const client = runtime.client;
     const payload = request.payload ?? {};
+    if(["prompt","steer","follow_up"].includes(request.command)&&typeof payload.message==="string"&&!payload.message.trimStart().startsWith("/")) {
+      const attached=await attachPromptFiles(runtime.summary.workspace,payload.message);
+      request={...request,payload:{...payload,message:attached.message,images:[...(Array.isArray(payload.images)?payload.images:[]),...attached.images]}};
+      if(request.command==="prompt")return client.prompt(attached.message,request.payload!.images as any);
+      if(request.command==="steer")return client.steer(attached.message,request.payload!.images as any);
+      return client.followUp(attached.message,request.payload!.images as any);
+    }
     switch (request.command) {
+      case "get_messages_page": {
+        const response=await (client as any).send({type:"get_messages_page",limit:payload.limit,before:payload.before});
+        if(!response.success)throw Object.assign(new Error(response.error),{statusCode:400});
+        return response.data;
+      }
+      case "get_completions":
+      case "reload_extensions": {
+        // Versioned runtime patch; SDK send is private in its TS surface, not in JS.
+        const response=await (client as unknown as {send(packet:unknown):Promise<any>}).send({type:request.command,name:String(payload.name??""),prefix:String(payload.prefix??"")});
+        if(!response.success)throw Object.assign(new Error(response.error),{statusCode:400});
+        if(request.command==="get_completions")return {items:(response.data?.items??[]).map((item:any)=>({...item,label:sanitizeTerminalText(item.label),description:sanitizeTerminalText(item.description)}))};
+        return response.data;
+      }
       case "prompt": return client.prompt(String(payload.message ?? ""), payload.images as any);
       case "steer": return client.steer(String(payload.message ?? ""), payload.images as any);
       case "follow_up": return client.followUp(String(payload.message ?? ""), payload.images as any);
@@ -257,6 +332,9 @@ export class EngineManager {
       env: {
         PI_ASK_USER_SOCKET: this.config.socketPath,
         PI_WEB_SESSION_ID: summary.id,
+        PI_WEB_CLI_PATH: this.cliPath,
+        PI_WEB_CONTROL_PORT: String(this.config.port),
+        PI_WEB_RUNTIME_DIR: this.config.runtimeDir,
         PI_SUBAGENT_TRANSPORT: "rpc",
         PI_WEB_WORKSPACE_ROOT: this.config.workspaceRoot,
         PI_WEB_SUBAGENT_SESSIONS_DIR: join(this.config.sessionsDir, "subagents"),
@@ -266,7 +344,9 @@ export class EngineManager {
     const unsubscribe = client.onEvent((event: any) => this.handleEvent(summary.id, client, event));
     try {
       await client.start();
-      const state = await client.getState();
+      const state = await awaitStartupState(() => client.getState());
+      // ACP is the sole context compressor; keep native Pi auto-compaction off.
+      if(extensionInventory().some(item=>item.name==="billion-context"))await client.setAutoCompaction(false);
       summary.sessionFile = state.sessionFile;
       summary.status = "idle";
       summary.updatedAt = now();
@@ -278,23 +358,42 @@ export class EngineManager {
         if (!runtime || runtime.stopping) return;
         this.running.delete(summary.id);
         this.updateSession(summary.id, "error");
-        this.events.publish("session.crashed", { code, signal, stderr: client.getStderr().slice(-4000) }, summary.id);
+        this.events.publish("session.crashed", { code, signal, stderr: redactLog(client.getStderr()).slice(-4000) }, summary.id);
       });
       this.events.publish("session.started", summary, summary.id);
     } catch (error) {
+      this.noteLaunchFailure(summary, error, client.getStderr());
       unsubscribe();
       await client.stop().catch(() => {});
       summary.status = "error";
       summary.updatedAt = now();
       this.store.upsertSession(summary);
       if (String(error).includes("Timeout waiting for response")) {
-        throw Object.assign(new Error("Pi nie odpowiedziało podczas uruchamiania sesji. Sprawdź rozszerzenia i dostępność providerów, a następnie ponów otwarcie sesji. Historia nie została usunięta."), {statusCode:503, code:"PI_SESSION_START_TIMEOUT"});
+        throw Object.assign(new Error("Pi nie odpowiedziało podczas uruchamiania sesji. Sprawdź rozszerzenia i dostępność providerów, a następnie ponów otwarcie sesji. Szczegóły są w Ustawienia → Pi · Diagnostyka. Historia nie została usunięta."), {statusCode:503, code:"PI_SESSION_START_TIMEOUT"});
       }
       throw error;
     }
   }
 
+  private noteLaunchFailure(summary: SessionSummary, error: unknown, stderr: string): void {
+    this.events.publish("session.launch_failed", { reason: "Pi session failed to start" }, summary.id);
+    const line = `${now()} session=${summary.id} name=${summary.name.replace(/[\r\n]/g, " ")} error=${redactLog(String(error)).slice(0, 500)} stderr=${redactLog(stderr).slice(-800)}\n`;
+    try { appendFileSync(join(this.config.runtimeDir, "session-launch.log"), line, { mode: 0o600 }); }
+    catch { /* diagnostics stay available from the control logs */ }
+  }
+
   private handleEvent(sessionId: string, client: RpcClient, event: any): void {
+    if((event.type==="message_end"&&event.message?.stopReason==="error")||["auto_retry_start","auto_retry_end"].includes(event.type)) {
+      const entry={timestamp:now(),sessionId,type:event.type,error:redactLog(String(event.message?.errorMessage??event.errorMessage??event.finalError??"")).slice(0,2000),attempt:event.attempt,success:event.success};
+      try {appendFileSync(join(this.config.runtimeDir,"session-runtime.log"),JSON.stringify(entry)+"\n",{mode:0o600});}
+      catch { /* An unavailable diagnostic disk must never stop a model turn. */ }
+    }
+    const ui = this.store.extensionUiState(sessionId);
+    if (applyExtensionEvent(ui, event)) {
+      ui.updatedAt = now();
+      this.store.saveExtensionUiState(sessionId, ui);
+      this.events.publish("extension.snapshot", ui, sessionId);
+    }
     if (event.type === "agent_start") this.updateSession(sessionId, "running");
     if (event.type === "agent_settled") this.updateSession(sessionId, "idle");
     if (event.type === "extension_ui_request") {
@@ -315,24 +414,48 @@ export class EngineManager {
       }catch{}
       return;
     }
+    if (["setStatus", "setWidget", "notify"].includes(request.method)) {
+      const state = this.store.extensionUiState(sessionId);
+      applyExtensionEvent(state, request);
+      state.sessionId = sessionId;
+      state.statuses ??= {};
+      state.widgets ??= {};
+      state.notices ??= [];
+      if (request.method === "setStatus") {
+        if (request.statusText) state.statuses[String(request.statusKey)] = sanitizeTerminalText(String(request.statusText));
+        else delete state.statuses[String(request.statusKey)];
+      }
+      if (request.method === "setWidget") {
+        if (request.widgetLines) state.widgets[String(request.widgetKey)] = (request.widgetLines as unknown[]).map((line) => sanitizeTerminalText(String(line)));
+        else delete state.widgets[String(request.widgetKey)];
+      }
+      if (request.method === "notify") {
+        if (request.notifyType === "error") this.events.publish("session.error", { reason: "Extension reported an error" }, sessionId);
+        state.notices.push({ id: randomUUID(), message: sanitizeTerminalText(String(request.message ?? "")), kind: String(request.notifyType ?? "info"), createdAt: now() });
+        state.notices = state.notices.slice(-20);
+      }
+      state.updatedAt = now();
+      this.store.saveExtensionUiState(sessionId, state);
+      this.events.publish("extension.snapshot", state, sessionId);
+    }
     const respond = (response: Record<string, unknown>) => this.writeUiResponse(client, { type: "extension_ui_response", id: request.id, ...response });
     if (request.method === "confirm") {
       this.interactions.createApproval({ sessionId, externalRequestId: request.id,
-        title: request.title, message: request.message, responder: (confirmed) => respond({ confirmed }) });
+        title: sanitizeTerminalText(String(request.title ?? "")), message: sanitizeTerminalText(String(request.message ?? "")), responder: (confirmed) => respond({ confirmed }) });
       return;
     }
     if (request.method === "select") {
       const options = (request.options ?? []).map((label: string, index: number) => ({
-        id: `option:${index}`, label, value: label, index: index + 1,
+        id: `option:${index}`, label: sanitizeTerminalText(label), value: label, index: index + 1,
       }));
       this.interactions.createExtensionQuestion({ sessionId, externalRequestId: request.id,
-        question: request.title, mode: "single-select", options, allowOther: false,
+        question: sanitizeTerminalText(String(request.title ?? "")), mode: "single-select", options, allowOther: false,
         responder: (value) => respond(value.cancelled ? { cancelled: true } : { value: value.value ?? "" }) });
       return;
     }
     if (request.method === "input" || request.method === "editor") {
       this.interactions.createExtensionQuestion({ sessionId, externalRequestId: request.id,
-        question: request.title, details: request.placeholder ?? request.prefill,
+        question: sanitizeTerminalText(String(request.title ?? "")), details: sanitizeTerminalText(String(request.placeholder ?? request.prefill ?? "")),
         mode: "text", allowOther: false,
         responder: (value) => respond(value.cancelled ? { cancelled: true } : { value: value.value ?? "" }) });
       return;
@@ -396,6 +519,10 @@ export class EngineManager {
       }
     });
   }
+}
+
+function stripAnsi(value: string): string {
+  return value.replace(/[\u001b\u009b][[\]()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*)?\u0007)|(?:(?:\d{1,4}(?:[;:]\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g, "");
 }
 
 function persistedPiMetadata(event: any): Record<string, unknown> {

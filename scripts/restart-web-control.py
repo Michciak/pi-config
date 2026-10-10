@@ -111,8 +111,8 @@ def start_detached() -> int:
 
 def restart_service() -> str:
     if loaded():
-        subprocess.check_call(["launchctl", "kickstart", "-k", TARGET])
-        return "launchd"
+        # kickstart retains launchd's cached ProgramArguments after a release switch.
+        subprocess.check_call(["launchctl", "bootout", TARGET])
 
     with PLIST.open("rb") as handle:
         config = plistlib.load(handle)
@@ -125,14 +125,21 @@ def restart_service() -> str:
             ["launchctl", "bootstrap", DOMAIN, str(PLIST)],
             text=True, capture_output=True,
         )
-        if result.returncode == 0 or loaded():
-            subprocess.run(["launchctl", "kickstart", "-k", TARGET], check=False)
+        if result.returncode == 0:
+            # Verify the registration, not merely launchctl's exit status. Some
+            # execution environments acknowledge bootstrap without retaining it.
+            for _ in range(10):
+                if loaded():break
+                time.sleep(0.2)
+        if loaded():
+            # RunAtLoad already starts the new registration. An immediate -k can
+            # interrupt its initialization and race the interaction socket binding.
             return "launchd"
         if attempt < 2:
             time.sleep(0.75 * (attempt + 1))
 
     pid = start_detached()
-    print(f"launchctl returned error 5; started detached fallback process {pid}.")
+    print(f"LaunchAgent registration could not be verified; started detached fallback process {pid}.")
     print("The LaunchAgent remains installed and macOS will retry it at the next login.")
     return "detached"
 

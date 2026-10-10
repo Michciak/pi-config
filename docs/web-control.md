@@ -56,9 +56,12 @@ The allowed workspace root defaults to:
 ~/Library/CloudStorage/Dropbox/NETRIX
 ```
 
-Override it only during installation with `PI_WEB_WORKSPACE_ROOT`. Both
-workspace and file operations use `realpath`; traversal and symlinks leaving
-that root are rejected.
+Override it only during installation with `PI_WEB_WORKSPACE_ROOT`. It stays
+the default session directory, but sessions, subagents and file operations
+accept any existing directory on the Mac (`~` and absolute paths included;
+relative paths still resolve against the default). All paths use `realpath`,
+so symlinks resolve to their targets; missing paths and non-directories are
+rejected.
 
 ## Firebase and Android
 
@@ -170,8 +173,8 @@ are visible, arrows select commands instead. Thinking is collapsed independently
 from model text, and tool calls/results have named disclosures. Replayed tool
 updates are grouped by call ID and hidden once the durable result is available.
 Scrolling away from the bottom pauses output following. Recognized source-file
-links open Rider on the Mac running Control Service; the server still enforces
-the configured workspace boundary. Failed opens are shown beside the message.
+links open Rider on the Mac running Control Service; the server accepts any
+existing file there. Failed opens are shown beside the message.
 
 ### Model settings and session folders
 
@@ -180,16 +183,22 @@ choices come from Pi RPC `get_available_thinking_levels` for the current model.
 Both model and thinking changes refresh authoritative state before updating the
 controls. Provider diagnostics are collapsed under Status rozszerzeń.
 
-Nowa sesja opens a dedicated form with a folder browser. The browser lists only
-directories under the configured workspace root, validates real paths and hides
-symlinks that escape that root. Select Wybierz ten folder to apply the current
-folder. Creating a session requires an explicit final click.
+Nowa sesja opens a dedicated form with a folder browser. The browser starts at
+the default workspace root but can navigate to any directory on the Mac
+(↑ Poziom wyżej works past the default, absolute and `~` paths can be typed
+directly). Użyj domyślnego restores the default folder. Select Wybierz ten
+folder to apply the current folder. Creating a session requires an explicit
+final click.
 
 ### Settings and scope
 
 Ustawienia is independent of session tools: Aplikacja contains Engine/Control
 lifecycle, phone pairing and notifications; Pi · Modele i scope edits global
-`enabledModels`; Pi · Diagnostyka shows extension status. Model selection offers
+`enabledModels`; Pi · Diagnostyka shows extension status and redacted tails of
+the Control Service logs and session-launch log. Repeated identical diagnostics
+are collapsed with an explicit occurrence count, so a stale provider warning
+cannot flood the panel. Opening a session retries a
+timed-out readiness read twice before reporting failure. Model selection offers
 global scope, all models, and models outside scope, with a provider filter.
 Scope patterns are resolved by Pi's own resolver. Saves use Pi SettingsManager
 and retain unrelated settings. New or stopped-and-resumed sessions load the new
@@ -202,11 +211,15 @@ models/providers that do not expose it.
 
 ### Scope selector and Cursor Grok compatibility
 
-Scope settings use searchable checkboxes, retaining existing patterns and missing
-catalog entries until explicitly deselected. The All models checkbox corresponds
-to Pi's empty enabledModels list. With no running session/catalog, saved entries
-remain editable and no false no-match diagnostics are generated. The service
-tries available session catalogs even when no chat is selected.
+Scope settings use the same cards as the rest of the panel: searchable checkboxes
+grouped by provider, plus a provider filter. Groups stay collapsed until a
+provider or search is chosen. The list is the
+stored Pi provider catalogs plus the cached Cursor model list, merged with a
+live session catalog when one is running. Models outside the current
+`enabledModels` scope can be selected and saved. Existing patterns stay checked
+and remain editable when the catalog is missing; an empty catalog does not
+invent no-match diagnostics. The All models checkbox corresponds to Pi's empty
+enabledModels list.
 
 The installer applies a backed-up compatibility patch only to pi-cursor-sdk
 0.3.10. Its catalog parser missed Cursor's reasoning_effort parameter (used by
@@ -226,7 +239,17 @@ from its managed Pi JSONL session. Current partial output remains in memory;
 SQLite stores only run metadata. Nested agents forward the same telemetry.
 Runs existing before this extension update do not have telemetry retroactively.
 After a Control restart unfinished runs are marked interrupted. Active child
-runs keep an otherwise idle parent session visibly running.
+runs keep an otherwise idle parent session visibly running. Each subagent tab
+can be hidden without stopping or deleting the run; hidden tabs are persisted
+per parent session in browser storage and can be restored from the Ukryte menu.
+
+The conversation uses a Pi-terminal transcript: monospaced full-width rows,
+terminal role marks, inline Markdown, reasoning and tool disclosures, and live
+streaming in transcript order. RPC provides structured messages rather than raw
+TTY/ANSI frames, so prompt editing, approval cards, images and browser-only
+controls remain native web controls instead of pretending to be terminal escape
+sequences. To keep long sessions responsive, the browser initially renders the
+last 160 messages and exposes earlier history in 160-message increments.
 
 Questions and approvals replace the composer until answered. Links lead to
 pending interactions in other sessions. The top editor handle grows the input

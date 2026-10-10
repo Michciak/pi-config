@@ -2,10 +2,12 @@ import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import { useState } from "react";
 import { controlApi } from "./api.js";
 import { linkLocalReferences, localFilePath } from "./fileReferences.js";
+import {PluginCode} from "./pluginRuntime.js";
 
 export function Markdown({ children, workspace }: { children: string; workspace?: string }) {
   const [error, setError] = useState("");
   return <><ReactMarkdown urlTransform={url => url.startsWith("file://") ? url : defaultUrlTransform(url)} components={{
+    pre({children}){const element=children as any;const language=element?.props?.className?.replace(/^language-/,"");return language?<PluginCode language={language} code={String(element.props.children??"").replace(/\n$/,"")} fallback={<pre>{children}</pre>}/>:<pre>{children}</pre>;},
     a({ href = "", children: label }) {
       const path = localFilePath(href, workspace);
       if (path) return <button className="file-link" title={path} onClick={() => { setError(""); void controlApi.openRider(path).catch(() => setError(`Nie udało się otworzyć w Riderze: ${path}`)); }}>{label}</button>;

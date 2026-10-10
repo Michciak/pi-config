@@ -1,0 +1,15 @@
+# Pi Remote: wyniki delegacji i aktualny stan pracy
+
+Wdrożenie: `2026-10-07T12-26-13-241Z`. Backup: `/Users/michalkozinski/.pi/agent/backups/pi-web-control-20261007-143007`.
+
+- Obie natywne ścieżki powiadomień ACP (pojedyncza i zbiorcza) używają w Remote systemowego `subagent_result` z `deliverAs: steer`, a nie `sendUserMessage`/follow-up. Natywne flagi dostarczenia i grupowanie pozostają zachowane. Historyczne wiadomości nie są przepisywane.
+- Automatyczny routing RPC i ACP korzysta ze wspólnej polityki: aktywny scope i skonfigurowane uwierzytelnienie. Po doprecyzowaniu użytkownika usunięto preferencję alternatywy dla rodzica: liczy się dopasowanie do zadania, nie różnorodność. Treść zadania ma pierwszeństwo przed nazwą agenta; wymagane obrazy/kontekst filtrują kandydatów, zweryfikowane role i wymagania rozumowania określają dopasowanie, a prostym zadaniom pomagają zweryfikowana klasa opóźnienia i znane dodatnie ceny katalogowe. Zero ceny subskrypcyjnej nie oznacza darmowego ani szybkiego modelu. Przy remisie dowodów nie wymusza się zmiany rodzica. Jawny wybór i skonfigurowany model roli ACP pozostają respektowane. Terminal zachowuje dotychczasowy ranking dostawców.
+- Bieżący stan goal/TODO z aktualnej gałęzi uzupełnia prompt granic pracy. Wstrzymany/wyczyszczony cel i wyniki delegacji nie upoważniają do wznowienia dawnych zadań. Zakończone zadania nie powinny być odtwarzane bez aktualnego polecenia lub konkretnych nowych danych o regresji. To ograniczenie promptu, nie gwarancja zachowania modelu.
+- Przegląd zawiera widoczne przyciski czyszczenia celu i TODO z potwierdzeniem. `/todos clear` działa bez tury modelu przez natywny reducer/store i dopisuje trwały marker do historii. Replay oraz panel respektują ten marker. Faktyczne dane użytkownika nie zostały wyczyszczone.
+- Odczyty sesji mają rewizję i powtórzenie po zdarzeniu końca pracy; odświeżenie nie jest gubione podczas wcześniejszego odczytu. Potwierdzone `pendingMessageCount=0` usuwa nieaktualny podgląd kolejki. Historyczny wpis dziecka nie może aktywować sesji bez działającego procesu rodzica.
+
+Weryfikacja: 149 testów jednostkowych/integracyjnych, 36 testów przeglądarkowych desktop/mobile, typecheck i build release. Testy obejmują ładowanie kopii rzeczywistych natywnych rozszerzeń, czyszczenie/replay TODO, oba kanały ACP z atrapą odbiorcy i wyścig odczytu z zakończeniem pracy. Nie uruchamiano płatnych delegacji testowych.
+
+Odczyt po wdrożeniu: BNC-voice3 idle; RPC `isStreaming=false`, `isCompacting=false`, `pendingMessageCount=0`; historia 1607 wiadomości; goal paused; TODO 7/9 — bez zmian.
+
+Korekta task-fit: 152 testy jednostkowe/integracyjne i typecheck. Testy pokazują dobór różnych wykonawców do drobnej poprawki, złożonej refaktoryzacji i researchu z jednego scope'u, brak preferencji różnorodności, wymagania obrazów/kontekstu i pierwszeństwo treści zadania. Zweryfikowane profile testowe są fiksturami, nie ocenami rzeczywistych modeli. Obecny plik kompetencji nie zawiera zweryfikowanych ról; nie należy traktować tego rankingu jako benchmarku jakości modeli.

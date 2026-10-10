@@ -4,7 +4,7 @@ Generated from the active `~/.pi/agent/settings.json` without changing it.
 
 - Default provider: `openai-codex`
 - Default model: `gpt-5.5`
-- Entries: `25`
+- Entries: `20`
 
 ## Enabled patterns
 
@@ -22,11 +22,6 @@ Generated from the active `~/.pi/agent/settings.json` without changing it.
 - `github-copilot/claude-haiku-4.5`
 - `github-copilot/kimi-k3`
 - `github-copilot/gpt-5-mini`
-- `opencode/qwen3.8-flash`
-- `opencode/glm-5.3`
-- `opencode/glm-5.3-flash`
-- `opencode/kimi-k3`
-- `opencode/nemotron-3-ultra-free`
 - `cursor/composer-2.5`
 - `cursor/composer-latest`
 - `cursor/auto`

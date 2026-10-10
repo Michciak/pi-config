@@ -12,6 +12,7 @@
     "packages/prompt-snippets"
   ],
   "scripts": {
+    "build:release": "node scripts/build-web-release.mjs",
     "build": "npm run build -w @pi-local/protocol && npm run build -w @pi-local/prompt-snippets && npm run build -w @pi-local/web && npm run build -w @pi-local/control",
     "dev": "npm run dev -w @pi-local/control",
     "test": "npm run test -w @pi-local/protocol && npm run test -w @pi-local/prompt-snippets && npm run test -w @pi-local/control && npm run test -w @pi-local/web && node --test tests/*.test.mjs tests/router/*.test.mjs",
@@ -32,5 +33,13 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@earendil-works/pi-coding-agent": {
+      "brace-expansion": "5.0.12"
+    },
+    "minimatch": "10.2.6",
+    "brace-expansion": "5.0.12",
+    "uuid": "11.1.1"
   }
 }

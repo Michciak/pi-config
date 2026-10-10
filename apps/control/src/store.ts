@@ -53,13 +53,32 @@ export class StateStore {
         token_hash TEXT PRIMARY KEY, device_id TEXT NOT NULL, expires_at INTEGER NOT NULL,
         exchanged_at INTEGER, session_hash TEXT, session_expires_at INTEGER
       );
+      CREATE TABLE IF NOT EXISTS extension_ui_state (
+        session_id TEXT PRIMARY KEY, state TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS ui_preferences (
+        client_id TEXT PRIMARY KEY, state TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS plugins (
+        id TEXT PRIMARY KEY, manifest TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
+        installed_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
     `);
     try { chmodSync(path, 0o600); } catch {}
     const row = this.db.prepare("SELECT value FROM metadata WHERE key='server_id'").get() as { value?: string } | undefined;
     this.serverId = row?.value ?? randomUUID();
     if (!row) this.db.prepare("INSERT INTO metadata(key,value) VALUES('server_id',?)").run(this.serverId);
-    this.invalidatePending("Control Service restarted");
-    this.db.prepare("UPDATE sessions SET status='interrupted', updated_at=? WHERE status IN ('idle','running','waiting')").run(now());
+  }
+
+  /** Only the singleton server startup may recover abandoned runtime state. */
+  recoverAfterRestart(): void {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.invalidatePending("Control Service restarted");
+      this.db.prepare("UPDATE sessions SET status='interrupted', updated_at=? WHERE status IN ('idle','running','waiting')").run(now());
+      this.db.exec("UPDATE subagent_runs SET metadata=json_set(metadata,'$.status','interrupted') WHERE json_extract(metadata,'$.status') IN ('running','starting','waiting')");
+      this.db.exec("COMMIT");
+    } catch (error) { this.db.exec("ROLLBACK"); throw error; }
   }
 
   close(): void { this.db.close(); }
@@ -232,6 +251,17 @@ export class StateStore {
   validWebSession(raw: string): boolean {
     const row = this.db.prepare("SELECT session_expires_at FROM web_tokens WHERE session_hash=?").get(StateStore.hash(raw)) as any;
     return !!row && row.session_expires_at > Date.now();
+  }
+
+  extensionUiState(sessionId: string): any {
+    const row = this.db.prepare("SELECT state FROM extension_ui_state WHERE session_id=?").get(sessionId) as any;
+    return parse(row?.state, { sessionId, statuses: {}, widgets: {}, notices: [], updatedAt: now() });
+  }
+
+  saveExtensionUiState(sessionId: string, state: unknown): void {
+    this.db.prepare(`INSERT INTO extension_ui_state(session_id,state,updated_at) VALUES(?,?,?)
+      ON CONFLICT(session_id) DO UPDATE SET state=excluded.state, updated_at=excluded.updated_at`)
+      .run(sessionId, json(state), now());
   }
 
   private mapQuestion(row: any): UserQuestion {

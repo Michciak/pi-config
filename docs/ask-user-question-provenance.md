@@ -9,7 +9,8 @@ extension:
 
 The versioned implementation is `extensions/ask-user-question.ts`. Its pure
 normalization and model-facing result logic is now isolated in
-`extensions/ask-user-question-contract.ts`. The original TUI custom views and
+`extensions/shared/ask-user-question-contract.ts`, outside Pi's top-level
+extension autoload. The original TUI custom views and
 editor remain active when `ctx.mode === "tui"`; RPC mode uses the local Unix
 socket supplied in `PI_ASK_USER_SOCKET`.
 

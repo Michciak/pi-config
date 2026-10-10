@@ -3,7 +3,9 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "types": ["node"]
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/vendor/**/*.js"]
 }

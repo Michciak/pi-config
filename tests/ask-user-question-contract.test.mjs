@@ -1,18 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
-  default as contractExtension,
   buildResult,
   cancelledResult,
   getOtherLabel,
   normalizeOptions,
   sortAnswers,
   unavailableResult,
-} from "../extensions/ask-user-question-contract.ts";
+} from "../extensions/shared/ask-user-question-contract.ts";
 
-test("contract module is also a valid no-op Pi extension", () => {
-  assert.equal(typeof contractExtension, "function");
-  assert.equal(contractExtension(), undefined);
+test("contract module stays outside Pi top-level extension autoload", () => {
+  const extensions = join(dirname(fileURLToPath(import.meta.url)), "../extensions");
+  const topLevel = readdirSync(extensions);
+  assert.equal(topLevel.includes("ask-user-question-contract.ts"), false);
+  assert.equal(topLevel.includes("shared"), true);
 });
 
 test("normalizes values and descriptions without changing explicit option values", () => {
